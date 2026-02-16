@@ -4,8 +4,9 @@ AI-Powered Product Video Generation at Scale with ModelArk.
 Matches the 6-step architecture from the Solution Brief.
 """
 import logging
+import time
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
@@ -17,6 +18,7 @@ from app.models.schemas import (
     VideoTaskStatus,
 )
 from app.services import cost_tracker, model_router, script_writer, video_gen
+from app import monitoring
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
@@ -49,7 +51,21 @@ async def health():
             "video_pro": settings.video_model_pro,
             "video_fast": settings.video_model_fast,
         },
+        "metrics": monitoring.get_metrics(),
     }
+
+
+@app.get("/metrics")
+async def get_metrics():
+    """Prometheus-compatible metrics endpoint."""
+    monitoring.increment_counter("api_requests_total")
+    return Response(content=monitoring.prometheus_format(), media_type="text/plain")
+
+
+@app.get("/health/detailed")
+async def health_detailed():
+    """Detailed health status with metrics and dependencies."""
+    return monitoring.get_health_status()
 
 
 # ─── Full Pipeline (Steps 1-4) ──────────────────────────────────────────────────
@@ -63,10 +79,15 @@ async def generate_ad(req: GenerateRequest):
     3. MODEL ROUTER: Hero → Seedance Pro | Catalog → Pro Fast
     4. SEEDANCE:     Video generation (async)
     """
+    monitoring.increment_counter("api_requests_total")
+    start_time = time.time()
+    
     try:
         # Step 2: Script generation via Seed 1.8
         logger.info("Step 2: Seed 1.8 — Generating ad script for SKU %s...", req.sku_id)
+        script_start = time.time()
         script, in_tokens, out_tokens = await script_writer.generate_script(req.brief)
+        monitoring.record_duration("script_generation_duration_seconds", time.time() - script_start)
 
         # Step 3: Smart Model Router
         logger.info("Step 3: Routing SKU %s (tier=%s)...", req.sku_id, req.sku_tier.value)
@@ -76,6 +97,7 @@ async def generate_ad(req: GenerateRequest):
         primary_platform = req.platforms[0].value if req.platforms else "tiktok"
         ratio = video_gen._RATIO_MAP.get(primary_platform, "16:9")
         logger.info("Step 4: Seedance — Creating video task with %s (ratio=%s)...", model_id, ratio)
+        video_start = time.time()
         task_id = await video_gen.create_video_task(
             prompt=script.video_prompt,
             model_id=model_id,
@@ -84,6 +106,7 @@ async def generate_ad(req: GenerateRequest):
             resolution=req.resolution,
             ratio=ratio,
         )
+        monitoring.record_duration("video_generation_duration_seconds", time.time() - video_start)
 
         # Calculate cost (video tokens estimated from duration + resolution)
         # Actual tokens come from the API response when video completes
@@ -96,6 +119,14 @@ async def generate_ad(req: GenerateRequest):
             cost_per_m=cost_per_m,
             sku_tier=req.sku_tier,
         )
+        
+        # Track metrics
+        monitoring.increment_counter("videos_generated_total")
+        monitoring.add_cost(cost.total_cost_usd)
+        if req.sku_tier.value == "hero":
+            monitoring.increment_counter("hero_videos")
+        else:
+            monitoring.increment_counter("catalog_videos")
 
         return GenerateResponse(
             task_id=task_id,
@@ -108,6 +139,7 @@ async def generate_ad(req: GenerateRequest):
         )
 
     except Exception as e:
+        monitoring.increment_counter("videos_failed_total")
         logger.exception("Pipeline failed for SKU %s", req.sku_id)
         raise HTTPException(status_code=500, detail=str(e))
 
