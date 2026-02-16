@@ -3,11 +3,13 @@ D2C Video Ad Pipeline — Streamlit Dashboard
 POC frontend matching the Solution Brief architecture.
 """
 import time
+import os
 
 import requests
 import streamlit as st
 
-API_BASE = "http://localhost:8000"
+# Use environment variable or default to localhost
+API_BASE = os.getenv("API_URL", "http://localhost:8000")
 
 st.set_page_config(page_title="D2C Video Ad Pipeline", page_icon="🎬", layout="wide")
 
