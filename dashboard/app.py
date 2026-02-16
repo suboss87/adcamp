@@ -80,15 +80,55 @@ if st.button("🚀 Generate Video Ad", type="primary", use_container_width=True)
         "resolution": resolution,
     }
 
+    # Warn about image requirements
+    if image_url:
+        st.info("📸 **Image Requirements**: Min 300px height. If image is too small, generation will fail.")
+
     # Steps 1-4: Start pipeline
-    with st.spinner("🧠 Running D2C pipeline: Script → Route → Video..."):
+    status_placeholder = st.empty()
+    status_placeholder.info("🚀 **Step 1/4**: Sending request to pipeline...")
+    
+    try:
+        status_placeholder.info("🧠 **Step 2/4**: Generating script with Seed 1.8...")
+        resp = requests.post(f"{API_BASE}/api/generate", json=payload, timeout=120)
+        resp.raise_for_status()
+        result = resp.json()
+        status_placeholder.success("✅ **Step 2/4**: Script generated successfully!")
+        time.sleep(1)
+        status_placeholder.info("🚦 **Step 3/4**: Model routing complete")
+        time.sleep(0.5)
+        status_placeholder.info("🎬 **Step 4/4**: Video generation started")
+        time.sleep(0.5)
+        status_placeholder.empty()
+    except requests.exceptions.HTTPError as e:
+        status_placeholder.empty()
+        st.error(f"❌ **Pipeline Error**: HTTP {e.response.status_code}")
         try:
-            resp = requests.post(f"{API_BASE}/api/generate", json=payload, timeout=120)
-            resp.raise_for_status()
-            result = resp.json()
-        except Exception as e:
-            st.error(f"Pipeline Error: {e}")
-            st.stop()
+            error_detail = e.response.json()
+            st.error(f"**Details**: {error_detail.get('detail', str(error_detail))}")
+        except:
+            st.error(f"**Raw error**: {e.response.text[:500]}")
+        
+        # Common issues
+        with st.expander("🔍 Common Issues & Solutions"):
+            st.markdown("""
+            **Image size error**: ModelArk requires images to be at least **300px in height**.
+            - Try a different image URL: `https://images.unsplash.com/photo-1572536147248-ac59a8abfa4b?w=400&h=600&fit=crop`
+            - Or leave the image URL empty to test without an image
+            
+            **Invalid API key**: Check Cloud Run environment variables
+            
+            **Timeout**: Video generation can take 30-60 seconds. Try again.
+            """)
+        st.stop()
+    except requests.exceptions.Timeout:
+        status_placeholder.empty()
+        st.error("⏱️ Request timed out. The API might be cold-starting (takes ~10s). Please try again.")
+        st.stop()
+    except Exception as e:
+        status_placeholder.empty()
+        st.error(f"❌ **Unexpected Error**: {str(e)}")
+        st.stop()
 
     # Show script output
     st.subheader("✨ Generated Ad Script (Seed 1.8)")
