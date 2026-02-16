@@ -8,6 +8,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **AWS Terraform**: Complete ECS Fargate deployment with VPC, ALB, and Secrets Manager
+  - `deploy/aws/terraform/main.tf` - Full infrastructure definition (~30 resources)
+  - `deploy/aws/terraform/variables.tf` - Configurable parameters
+  - `deploy/aws/terraform/outputs.tf` - Service URLs and resource IDs
+  - Comprehensive README with cost estimates (~$68-78/month)
+  - Support for both Docker Hub and AWS ECR images
+- **Prometheus + Grafana Monitoring Stack**: Complete observability solution
+  - Pre-configured Prometheus scrape configs for AdCamp metrics
+  - Custom Grafana dashboard ("AdCamp Overview") with 12 panels
+  - AlertManager with critical/warning/info alert rules
+  - Node Exporter for system metrics
+  - cAdvisor for container metrics
+  - Docker Compose setup in `deploy/monitoring/`
+  - Alert rules for API health, performance, cost, and SKU ratio monitoring
+  - Grafana datasource auto-provisioning
+  - Example Slack/Email/PagerDuty notification configs
+- Makefile commands: `make monitoring-up` and `make monitoring-down`
+- AGENTS.md updated with AWS and monitoring documentation
 - Enterprise repository structure with platform-specific deployment guides
 - Deployment configs for GCP Cloud Run, AWS ECS, BytePlus VKE, Railway, Render, Docker Compose
 - Terraform templates for infrastructure as code (GCP, AWS, BytePlus)

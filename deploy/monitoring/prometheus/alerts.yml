@@ -1,0 +1,162 @@
+groups:
+  - name: adcamp_api_alerts
+    interval: 30s
+    rules:
+      # High error rate
+      - alert: HighVideoGenerationFailureRate
+        expr: |
+          (
+            rate(videos_failed_total[5m]) / 
+            (rate(videos_generated_total[5m]) + rate(videos_failed_total[5m]))
+          ) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          service: api
+        annotations:
+          summary: "High video generation failure rate"
+          description: "Video generation failure rate is {{ $value | humanizePercentage }} over the last 5 minutes"
+
+      # API response time
+      - alert: SlowScriptGeneration
+        expr: script_generation_avg_seconds > 10
+        for: 5m
+        labels:
+          severity: warning
+          service: api
+        annotations:
+          summary: "Script generation is slow"
+          description: "Average script generation time is {{ $value }}s (threshold: 10s)"
+
+      - alert: SlowVideoGeneration
+        expr: video_generation_avg_seconds > 60
+        for: 5m
+        labels:
+          severity: warning
+          service: api
+        annotations:
+          summary: "Video generation is slow"
+          description: "Average video generation time is {{ $value }}s (threshold: 60s)"
+
+      # Cost monitoring
+      - alert: HighDailyCost
+        expr: increase(total_cost_usd[24h]) > 100
+        for: 1h
+        labels:
+          severity: info
+          service: api
+        annotations:
+          summary: "High daily API cost"
+          description: "Daily API cost is ${{ $value | humanize }} (threshold: $100/day)"
+
+      # Volume monitoring
+      - alert: HighVideoGenerationVolume
+        expr: rate(videos_generated_total[1h]) > 100
+        for: 30m
+        labels:
+          severity: info
+          service: api
+        annotations:
+          summary: "High video generation volume"
+          description: "Generating {{ $value | humanize }} videos/hour"
+
+      # API health
+      - alert: APIDown
+        expr: up{job="adcamp-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: api
+        annotations:
+          summary: "AdCamp API is down"
+          description: "API has been unreachable for more than 1 minute"
+
+  - name: adcamp_model_alerts
+    interval: 30s
+    rules:
+      # Model-specific alerts
+      - alert: LowHeroVideoRatio
+        expr: |
+          (
+            rate(hero_videos[1h]) / 
+            (rate(hero_videos[1h]) + rate(catalog_videos[1h]))
+          ) < 0.15
+        for: 1h
+        labels:
+          severity: info
+          service: api
+        annotations:
+          summary: "Hero video ratio is low"
+          description: "Only {{ $value | humanizePercentage }} of videos are hero tier (expected: ~20%)"
+
+      - alert: HighHeroVideoRatio
+        expr: |
+          (
+            rate(hero_videos[1h]) / 
+            (rate(hero_videos[1h]) + rate(catalog_videos[1h]))
+          ) > 0.30
+        for: 1h
+        labels:
+          severity: info
+          service: api
+        annotations:
+          summary: "Hero video ratio is high"
+          description: "{{ $value | humanizePercentage }} of videos are hero tier (expected: ~20%) - check SKU tier routing"
+
+  - name: system_alerts
+    interval: 30s
+    rules:
+      # CPU usage
+      - alert: HighCPUUsage
+        expr: |
+          100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage on {{ $labels.instance }}"
+          description: "CPU usage is {{ $value | humanize }}% (threshold: 80%)"
+
+      # Memory usage
+      - alert: HighMemoryUsage
+        expr: |
+          (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage on {{ $labels.instance }}"
+          description: "Memory usage is {{ $value | humanize }}% (threshold: 85%)"
+
+      # Disk space
+      - alert: LowDiskSpace
+        expr: |
+          (1 - (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"})) * 100 > 85
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low disk space on {{ $labels.instance }}"
+          description: "Disk usage is {{ $value | humanize }}% (threshold: 85%)"
+
+  - name: prometheus_alerts
+    interval: 30s
+    rules:
+      # Prometheus health
+      - alert: PrometheusConfigReloadFailed
+        expr: prometheus_config_last_reload_successful == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Prometheus configuration reload failed"
+          description: "Prometheus configuration reload has been failing for 5 minutes"
+
+      - alert: PrometheusTooManyRestarts
+        expr: changes(process_start_time_seconds{job="prometheus"}[15m]) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Prometheus is restarting frequently"
+          description: "Prometheus has restarted {{ $value }} times in the last 15 minutes"

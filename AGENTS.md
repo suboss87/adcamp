@@ -52,9 +52,24 @@ make docker-up          # Start services via docker-compose
 make docker-down        # Stop services
 ```
 
-### Deployment
+### Monitoring (Prometheus + Grafana)
 ```bash
-# GCP Cloud Run (requires GCP_PROJECT_ID env var)
+cd deploy/monitoring
+docker-compose up -d    # Start monitoring stack
+docker-compose ps       # Check status
+docker-compose down     # Stop monitoring stack
+
+# Access:
+# - Grafana: http://localhost:3000 (admin/admin)
+# - Prometheus: http://localhost:9090
+# - AlertManager: http://localhost:9093
+```
+
+### Deployment
+
+#### GCP Cloud Run
+```bash
+# Using Make (requires GCP_PROJECT_ID env var)
 export GCP_PROJECT_ID=adcamp-487609
 make deploy-gcp
 
@@ -63,6 +78,28 @@ gcloud builds submit --config=cloudbuild-dashboard.yaml . --project=adcamp-48760
 
 # Check deployment logs
 gcloud logging read "resource.type=cloud_run_revision" --limit 50 --project=adcamp-487609
+
+# Or use Terraform
+cd deploy/gcp/terraform
+terraform init
+terraform apply
+```
+
+#### AWS ECS Fargate
+```bash
+# Using Terraform (recommended)
+cd deploy/aws/terraform
+cp terraform.tfvars.example terraform.tfvars
+# Edit terraform.tfvars with your API key and settings
+terraform init
+terraform plan
+terraform apply
+
+# View ECS services
+aws ecs list-services --cluster adcamp-cluster --region ap-southeast-1
+
+# View logs
+aws logs tail /ecs/adcamp-api --follow --region ap-southeast-1
 ```
 
 ## Architecture & Code Structure
@@ -107,11 +144,18 @@ gcloud logging read "resource.type=cloud_run_revision" --limit 50 --project=adca
 ### API Endpoints (`app/main.py`)
 
 - **`POST /api/generate`**: Full pipeline (steps 1-4), returns immediately with `task_id`
+- **`POST /api/generate-stream`**: SSE streaming endpoint with live progress updates (NEW)
 - **`GET /api/status/{task_id}`**: Poll video generation status
 - **`GET /api/wait/{task_id}`**: Blocking call (waits for completion)
 - **`GET /health`**: Health check with model config + metrics
 - **`GET /metrics`**: Prometheus text format
 - **`GET /health/detailed`**: Extended health with dependency status
+
+**SSE Stream Format** (`/api/generate-stream`):
+- Streams JSON events via Server-Sent Events
+- Event format: `data: {"step": 1-5, "status": "running|complete|failed", "message": "...", "progress": 0-100, "data": {...}}`
+- Steps: 1) Initialize → 2) Script Gen → 3) Model Routing → 4) Task Creation → 5) Video Generation
+- Final event includes video_url, cost breakdown, and script
 
 ### Environment Configuration (`app/config.py`)
 
@@ -140,8 +184,10 @@ Metrics are **not persisted** across restarts (extend to Redis/Prometheus for pr
 
 - **`deploy/docker/`**: Dockerfile (API + FFmpeg), docker-compose.yml, Dockerfile.dashboard (Streamlit)
 - **`deploy/gcp/`**: Cloud Run configs, Terraform templates, deployment scripts
+- **`deploy/aws/`**: ECS Fargate + Terraform (VPC, ALB, Secrets Manager)
 - **`deploy/byteplus/`**: VKE Kubernetes manifests (namespace, deployment, service, ingress)
 - **`deploy/kubernetes/`**: Generic K8s with Kustomize (base + overlays for dev/staging/prod)
+- **`deploy/monitoring/`**: Prometheus + Grafana stack with pre-configured dashboards and alerts
 
 ### Docker Image Details
 
@@ -154,10 +200,11 @@ Metrics are **not persisted** across restarts (extend to Redis/Prometheus for pr
 ### Current Deployment
 
 - **Project**: `adcamp-487609` (GCP)
-- **API**: https://adcamp-api-309502792454.asia-southeast1.run.app
-- **Dashboard**: https://adcamp-dashboard-309502792454.asia-southeast1.run.app
+- **API**: https://adcamp-api-qhfkhbdd4a-as.a.run.app
+- **Dashboard**: https://adcamp-dashboard-qhfkhbdd4a-as.a.run.app
 - **Secret**: `adcamp-ark-api-key` in GCP Secret Manager
 - **Images**: `gcr.io/adcamp-487609/adcamp:latest`, `gcr.io/adcamp-487609/adcamp-dashboard:latest`
+- **Latest Features**: SSE streaming, image upload, BytePlus branding
 
 ## Common Patterns & Conventions
 

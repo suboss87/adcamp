@@ -1,0 +1,64 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'adcamp'
+    environment: 'production'
+
+# Alerting configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - alertmanager:9093
+
+# Load rules once and periodically evaluate them
+rule_files:
+  - "alerts.yml"
+
+# Scrape configurations
+scrape_configs:
+  # AdCamp API metrics
+  - job_name: 'adcamp-api'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['adcamp-api:8000']
+        labels:
+          service: 'api'
+          app: 'adcamp'
+
+  # AdCamp Dashboard metrics (if exposed)
+  - job_name: 'adcamp-dashboard'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['adcamp-dashboard:8501']
+        labels:
+          service: 'dashboard'
+          app: 'adcamp'
+    # Dashboard may not have /metrics endpoint, so allow failures
+    scrape_interval: 30s
+    scrape_timeout: 10s
+
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Node exporter for system metrics (optional)
+  - job_name: 'node'
+    static_configs:
+      - targets: ['node-exporter:9100']
+        labels:
+          instance: 'adcamp-host'
+
+  # Container metrics from cAdvisor (optional, for Docker)
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+
+# Remote write configuration (optional - for long-term storage)
+# remote_write:
+#   - url: "https://your-prometheus-remote-write-endpoint"
+#     basic_auth:
+#       username: "your-username"
+#       password: "your-password"

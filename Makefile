@@ -1,4 +1,4 @@
-.PHONY: help install test dev docker-build docker-up docker-down deploy-gcp deploy-aws deploy-byteplus lint clean
+.PHONY: help install test dev docker-build docker-up docker-down monitoring-up monitoring-down deploy-gcp deploy-aws deploy-byteplus lint clean
 
 # Default target
 help:
@@ -15,6 +15,10 @@ help:
 	@echo "  make docker-build     Build Docker image"
 	@echo "  make docker-up        Start services with Docker Compose"
 	@echo "  make docker-down      Stop Docker Compose services"
+	@echo ""
+	@echo "Monitoring:"
+	@echo "  make monitoring-up    Start Prometheus + Grafana stack"
+	@echo "  make monitoring-down  Stop monitoring stack"
 	@echo ""
 	@echo "Deployment:"
 	@echo "  make deploy-gcp       Deploy to GCP Cloud Run"
@@ -69,6 +73,20 @@ docker-down:
 	cd deploy/docker && docker-compose down
 	@echo "✅ Services stopped"
 
+# Monitoring targets
+monitoring-up:
+	@echo "📊 Starting monitoring stack..."
+	cd deploy/monitoring && docker-compose up -d
+	@echo "✅ Monitoring stack started"
+	@echo "   Grafana: http://localhost:3000 (admin/admin)"
+	@echo "   Prometheus: http://localhost:9090"
+	@echo "   AlertManager: http://localhost:9093"
+
+monitoring-down:
+	@echo "📊 Stopping monitoring stack..."
+	cd deploy/monitoring && docker-compose down
+	@echo "✅ Monitoring stack stopped"
+
 # Deployment targets
 deploy-gcp:
 	@echo "☁️  Deploying to GCP Cloud Run..."
@@ -77,7 +95,7 @@ deploy-gcp:
 		echo "   Run: export GCP_PROJECT_ID=your-project-id"; \
 		exit 1; \
 	fi
-	cd deploy/gcp && ./scripts/deploy.sh
+	./deploy/gcp/deploy-all.sh
 	@echo "✅ Deployment complete"
 
 deploy-aws:

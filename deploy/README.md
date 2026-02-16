@@ -143,15 +143,33 @@ HERO_SKU_THRESHOLD=0.20            # Top 20% = hero SKUs
 - **[AWS ECS/Fargate](./aws/)** - AWS-native container deployment
 - **[Generic Kubernetes](./kubernetes/)** - Portable K8s manifests with Kustomize
 - **[BytePlus VKE](./byteplus/)** - BytePlus Kubernetes Engine
+- **[Monitoring Stack](./monitoring/)** - Prometheus + Grafana observability
+
+## Monitoring & Observability
+
+A complete monitoring stack is provided in `deploy/monitoring/` with:
+- **Prometheus**: Metrics collection and storage
+- **Grafana**: Pre-configured dashboards for video generation, cost tracking, and performance
+- **AlertManager**: Alert routing with Slack/Email/PagerDuty integration
+- **Node Exporter + cAdvisor**: System and container metrics
+
+**Quick start**:
+```bash
+cd deploy/monitoring
+docker-compose up -d
+# Access Grafana at http://localhost:3000 (admin/admin)
+```
+
+See [deploy/monitoring/README.md](./monitoring/README.md) for full setup guide.
 
 ## Terraform Support
 
 Enterprise users can use Infrastructure as Code (Terraform) for:
-- **GCP**: `deploy/gcp/terraform/`
-- **AWS**: `deploy/aws/terraform/`
-- **BytePlus**: `deploy/byteplus/terraform/`
+- **GCP**: `deploy/gcp/terraform/` - Cloud Run + Secret Manager
+- **AWS**: `deploy/aws/terraform/` - ECS Fargate + ALB + Secrets Manager
+- **BytePlus**: `deploy/byteplus/terraform/` - VKE + ModelArk integration
 
-Each includes `main.tf`, `variables.tf`, and `outputs.tf` with best practices.
+Each includes `main.tf`, `variables.tf`, `outputs.tf`, and comprehensive README with cost estimates and production best practices.
 
 ## CI/CD Integration
 

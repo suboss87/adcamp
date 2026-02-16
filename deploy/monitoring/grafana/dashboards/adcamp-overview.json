@@ -1,0 +1,411 @@
+{
+  "dashboard": {
+    "id": null,
+    "uid": "adcamp-overview",
+    "title": "AdCamp - Overview",
+    "tags": ["adcamp", "video-generation"],
+    "timezone": "browser",
+    "schemaVersion": 16,
+    "version": 0,
+    "refresh": "30s",
+    "panels": [
+      {
+        "id": 1,
+        "gridPos": {
+          "x": 0,
+          "y": 0,
+          "w": 6,
+          "h": 4
+        },
+        "type": "stat",
+        "title": "Total Videos Generated",
+        "targets": [
+          {
+            "expr": "videos_generated_total",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "colorMode": "value",
+          "graphMode": "area",
+          "justifyMode": "auto",
+          "orientation": "auto",
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"],
+            "fields": ""
+          }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 1000, "color": "yellow"},
+                {"value": 10000, "color": "red"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 2,
+        "gridPos": {
+          "x": 6,
+          "y": 0,
+          "w": 6,
+          "h": 4
+        },
+        "type": "stat",
+        "title": "Failed Videos",
+        "targets": [
+          {
+            "expr": "videos_failed_total",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "colorMode": "value",
+          "graphMode": "area"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 10, "color": "yellow"},
+                {"value": 50, "color": "red"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 3,
+        "gridPos": {
+          "x": 12,
+          "y": 0,
+          "w": 6,
+          "h": 4
+        },
+        "type": "stat",
+        "title": "Total Cost (USD)",
+        "targets": [
+          {
+            "expr": "total_cost_usd",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "colorMode": "value",
+          "graphMode": "area"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyUSD",
+            "decimals": 2,
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 100, "color": "yellow"},
+                {"value": 500, "color": "red"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 4,
+        "gridPos": {
+          "x": 18,
+          "y": 0,
+          "w": 6,
+          "h": 4
+        },
+        "type": "stat",
+        "title": "Avg Script Generation Time",
+        "targets": [
+          {
+            "expr": "script_generation_avg_seconds",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "colorMode": "value"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "decimals": 2,
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 5, "color": "yellow"},
+                {"value": 10, "color": "red"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 5,
+        "gridPos": {
+          "x": 0,
+          "y": 4,
+          "w": 12,
+          "h": 8
+        },
+        "type": "graph",
+        "title": "Video Generation Rate",
+        "targets": [
+          {
+            "expr": "rate(videos_generated_total[5m]) * 60",
+            "refId": "A",
+            "legendFormat": "Success"
+          },
+          {
+            "expr": "rate(videos_failed_total[5m]) * 60",
+            "refId": "B",
+            "legendFormat": "Failed"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "short",
+            "label": "Videos per minute"
+          },
+          {
+            "format": "short"
+          }
+        ],
+        "legend": {
+          "show": true
+        }
+      },
+      {
+        "id": 6,
+        "gridPos": {
+          "x": 12,
+          "y": 4,
+          "w": 12,
+          "h": 8
+        },
+        "type": "graph",
+        "title": "Cost Over Time",
+        "targets": [
+          {
+            "expr": "increase(total_cost_usd[1h])",
+            "refId": "A",
+            "legendFormat": "Hourly Cost"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "currencyUSD",
+            "label": "Cost"
+          },
+          {
+            "format": "short"
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "gridPos": {
+          "x": 0,
+          "y": 12,
+          "w": 12,
+          "h": 8
+        },
+        "type": "graph",
+        "title": "Hero vs Catalog Videos",
+        "targets": [
+          {
+            "expr": "rate(hero_videos[5m]) * 60",
+            "refId": "A",
+            "legendFormat": "Hero (Seedance 1.5 Pro)"
+          },
+          {
+            "expr": "rate(catalog_videos[5m]) * 60",
+            "refId": "B",
+            "legendFormat": "Catalog (Seedance 1.0 Pro Fast)"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "short",
+            "label": "Videos per minute"
+          },
+          {
+            "format": "short"
+          }
+        ],
+        "legend": {
+          "show": true
+        }
+      },
+      {
+        "id": 8,
+        "gridPos": {
+          "x": 12,
+          "y": 12,
+          "w": 12,
+          "h": 8
+        },
+        "type": "graph",
+        "title": "Generation Times",
+        "targets": [
+          {
+            "expr": "script_generation_avg_seconds",
+            "refId": "A",
+            "legendFormat": "Script Generation (Seed 1.8)"
+          },
+          {
+            "expr": "video_generation_avg_seconds",
+            "refId": "B",
+            "legendFormat": "Video Generation (Seedance)"
+          }
+        ],
+        "yaxes": [
+          {
+            "format": "s",
+            "label": "Time"
+          },
+          {
+            "format": "short"
+          }
+        ]
+      },
+      {
+        "id": 9,
+        "gridPos": {
+          "x": 0,
+          "y": 20,
+          "w": 24,
+          "h": 1
+        },
+        "type": "row",
+        "title": "Detailed Metrics"
+      },
+      {
+        "id": 10,
+        "gridPos": {
+          "x": 0,
+          "y": 21,
+          "w": 8,
+          "h": 6
+        },
+        "type": "piechart",
+        "title": "Video Distribution (Hero vs Catalog)",
+        "targets": [
+          {
+            "expr": "hero_videos",
+            "refId": "A",
+            "legendFormat": "Hero"
+          },
+          {
+            "expr": "catalog_videos",
+            "refId": "B",
+            "legendFormat": "Catalog"
+          }
+        ],
+        "options": {
+          "legend": {
+            "displayMode": "table",
+            "placement": "right",
+            "values": ["value", "percent"]
+          }
+        }
+      },
+      {
+        "id": 11,
+        "gridPos": {
+          "x": 8,
+          "y": 21,
+          "w": 8,
+          "h": 6
+        },
+        "type": "gauge",
+        "title": "Success Rate",
+        "targets": [
+          {
+            "expr": "videos_generated_total / (videos_generated_total + videos_failed_total) * 100",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "min": 0,
+            "max": 100,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "red"},
+                {"value": 90, "color": "yellow"},
+                {"value": 95, "color": "green"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 12,
+        "gridPos": {
+          "x": 16,
+          "y": 21,
+          "w": 8,
+          "h": 6
+        },
+        "type": "stat",
+        "title": "Avg Video Generation Time",
+        "targets": [
+          {
+            "expr": "video_generation_avg_seconds",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "decimals": 1,
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 30, "color": "yellow"},
+                {"value": 60, "color": "red"}
+              ]
+            }
+          }
+        }
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "timepicker": {
+      "refresh_intervals": ["10s", "30s", "1m", "5m", "15m", "30m", "1h"]
+    }
+  }
+}

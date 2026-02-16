@@ -60,3 +60,8 @@ logs/
 # Examples output
 examples/*.json
 examples/*.mp4
+
+# Monitoring data (Prometheus, Grafana, AlertManager)
+deploy/monitoring/prometheus-data/
+deploy/monitoring/grafana-data/
+deploy/monitoring/alertmanager-data/
