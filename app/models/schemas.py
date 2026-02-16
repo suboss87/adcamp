@@ -31,6 +31,29 @@ class GenerateRequest(BaseModel):
     )
     duration: int = Field(8, ge=2, le=12)
     resolution: str = "720p"
+    
+    class Config:
+        json_schema_extra = {
+            "examples": [
+                {
+                    "brief": "Summer running campaign, energetic and dynamic vibes, urban streets at golden hour",
+                    "sku_tier": "catalog",
+                    "sku_id": "SHOE-001",
+                    "platforms": ["tiktok", "instagram"],
+                    "duration": 5,
+                    "resolution": "720p"
+                },
+                {
+                    "brief": "Luxury watch showcase, elegant and sophisticated, minimalist studio setting",
+                    "product_image_url": "https://example.com/product.jpg",
+                    "sku_tier": "hero",
+                    "sku_id": "WATCH-PREMIUM-001",
+                    "platforms": ["youtube"],
+                    "duration": 10,
+                    "resolution": "1080p"
+                }
+            ]
+        }
 
 
 # ---- Script Output (from Seed 1.8) ----
