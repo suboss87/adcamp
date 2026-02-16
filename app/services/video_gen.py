@@ -21,33 +21,45 @@ _HEADERS = {
 }
 
 
+# Aspect-ratio map for platforms
+_RATIO_MAP = {
+    "tiktok": "9:16",
+    "instagram": "1:1",
+    "youtube": "16:9",
+}
+
+
 async def create_video_task(
     prompt: str,
     model_id: str,
     image_url: Optional[str] = None,
-    duration: int = 8,
+    duration: int = 5,
     resolution: str = "720p",
+    ratio: str = "16:9",
 ) -> str:
     """
-    Create an async video generation task.
+    Create an async video generation task via
+    POST /api/v3/contents/generations/tasks
     model_id comes from the Smart Router.
     Returns the task_id for polling.
     """
     content = []
     if image_url:
         content.append({"type": "image_url", "image_url": {"url": image_url}})
-
-    prompt_with_params = f"{prompt} --dur {duration} --res {resolution}"
-    content.append({"type": "text", "text": prompt_with_params})
+    content.append({"type": "text", "text": prompt})
 
     payload = {
         "model": model_id,
         "content": content,
+        "resolution": resolution,
+        "ratio": ratio,
+        "duration": duration,
+        "watermark": False,
     }
 
     async with httpx.AsyncClient(timeout=60) as client:
         resp = await client.post(
-            f"{_BASE}/video/generations",
+            f"{_BASE}/contents/generations/tasks",
             headers=_HEADERS,
             json=payload,
         )
@@ -60,10 +72,12 @@ async def create_video_task(
 
 
 async def get_video_status(task_id: str, model_used: str = "") -> VideoTaskStatus:
-    """Query the status of a video generation task."""
+    """Query the status of a video generation task via
+    GET /api/v3/contents/generations/tasks/{task_id}
+    """
     async with httpx.AsyncClient(timeout=30) as client:
         resp = await client.get(
-            f"{_BASE}/video/generations/{task_id}",
+            f"{_BASE}/contents/generations/tasks/{task_id}",
             headers=_HEADERS,
         )
         resp.raise_for_status()
@@ -73,16 +87,22 @@ async def get_video_status(task_id: str, model_used: str = "") -> VideoTaskStatu
     video_url = None
     error = None
 
-    if status == "Succeeded":
-        content = data.get("content", [])
-        for item in content:
-            if item.get("type") == "video_url":
-                video_url = item.get("video_url", {}).get("url")
-                break
-        if not video_url:
-            video_url = data.get("video_url")
-    elif status == "Failed":
+    if status == "succeeded":
+        # Response: {"content": {"video_url": "..."}}
+        content = data.get("content", {})
+        if isinstance(content, dict):
+            video_url = content.get("video_url")
+        elif isinstance(content, list):
+            for item in content:
+                if isinstance(item, dict) and "video_url" in item:
+                    video_url = item["video_url"]
+                    break
+        status = "Succeeded"  # normalise for our schema
+    elif status == "failed":
         error = data.get("error", {}).get("message", "Unknown error")
+        status = "Failed"
+    elif status in ("processing", "queued", "running"):
+        status = "Running"
 
     return VideoTaskStatus(
         task_id=task_id,

@@ -73,13 +73,16 @@ async def generate_ad(req: GenerateRequest):
         model_id, cost_per_m = model_router.route(req.sku_tier)
 
         # Step 4: Video generation via Seedance
-        logger.info("Step 4: Seedance — Creating video task with %s...", model_id)
+        primary_platform = req.platforms[0].value if req.platforms else "tiktok"
+        ratio = video_gen._RATIO_MAP.get(primary_platform, "16:9")
+        logger.info("Step 4: Seedance — Creating video task with %s (ratio=%s)...", model_id, ratio)
         task_id = await video_gen.create_video_task(
             prompt=script.video_prompt,
             model_id=model_id,
             image_url=req.product_image_url,
             duration=req.duration,
             resolution=req.resolution,
+            ratio=ratio,
         )
 
         # Calculate cost (video tokens estimated from duration + resolution)
