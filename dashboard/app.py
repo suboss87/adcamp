@@ -1,526 +1,168 @@
 """
 AdCamp - AI Video Ad Generation Dashboard
-Powered by BytePlus ModelArk
+Premium multi-page shell with st.navigation()
 """
-import base64
-import io
-import json
-import os
-import time
-from typing import Optional
-
-import requests
 import streamlit as st
-from PIL import Image
 
-# ═══════════════════════════════════════════════════════════════════════════════
-#  CONFIGURATION
-# ═══════════════════════════════════════════════════════════════════════════════
-
-API_BASE = os.getenv(
-    "API_URL", 
-    "https://adcamp-api-309502792454.asia-southeast1.run.app"
+from config import (
+    ACCENT, ACCENT_LIGHT,
+    BORDER, BORDER_SUBTLE,
+    SUCCESS, SUCCESS_LIGHT, ERROR, ERROR_LIGHT,
+    TEXT_PRIMARY, TEXT_SECONDARY, TEXT_TERTIARY,
+    SHADOW_SM, SHADOW_MD,
+    API_BASE,
 )
 
-# BytePlus Brand Colors
-BYTEPLUS_BLUE = "#0066FF"
-
-# ═══════════════════════════════════════════════════════════════════════════════
-#  HELPER FUNCTIONS
-# ═══════════════════════════════════════════════════════════════════════════════
-
-_STEP_ICONS = {"running": "⏳", "complete": "✅", "failed": "❌"}
-
-
-def _get_step_icon(status):
-    return _STEP_ICONS.get(status, "⚪")
-
-# ═══════════════════════════════════════════════════════════════════════════════
-#  PAGE CONFIG & STYLING
-# ═══════════════════════════════════════════════════════════════════════════════
+# =============================================================================
+#  PAGE CONFIG
+# =============================================================================
 
 st.set_page_config(
-    page_title="AdCamp · BytePlus ModelArk",
-    page_icon="🎬",
+    page_title="AdCamp",
+    page_icon="▪",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-# Custom CSS with BytePlus branding
+# =============================================================================
+#  GLOBAL CSS — Minimal overrides (theme handled by .streamlit/config.toml)
+# =============================================================================
+
 st.markdown(f"""
 <style>
-    /* BytePlus Blue throughout */
-    .block-container {{
-        padding-top: 1rem;
-        max-width: 1400px;
+    /* ─── Inter font ─── */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    html, body, [data-testid="stAppViewContainer"] {{
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     }}
-    
-    /* Header with logo */
-    .header-container {{
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-        margin-bottom: 1.5rem;
-    }}
-    
-    .header-logo {{
-        width: 48px;
-        height: 48px;
-    }}
-    
-    .header-title {{
-        font-size: 2rem;
+    h1, h2, h3, h4 {{
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
         font-weight: 700;
-        color: {BYTEPLUS_BLUE};
-        margin: 0;
+        letter-spacing: -0.025em;
     }}
-    
-    .header-subtitle {{
-        color: #6b7280;
-        font-size: 0.95rem;
-        margin-top: 0.25rem;
+    .block-container {{
+        padding: 2.5rem 2rem 2rem 2rem;
+        max-width: 980px;
     }}
-    
-    /* Progress step cards */
-    .progress-step {{
-        background: #ffffff;
-        border: 2px solid #e5e7eb;
-        border-radius: 8px;
-        padding: 1rem;
-        margin-bottom: 0.5rem;
+
+    /* ─── Sidebar nav items ─── */
+    [data-testid="stSidebarNav"] a {{
+        font-size: 0.875rem !important;
+        font-weight: 500 !important;
+        color: {TEXT_SECONDARY} !important;
+        padding: 0.5rem 1rem !important;
+        border-radius: 8px !important;
+        margin: 1px 0.5rem !important;
+        transition: all 0.15s ease !important;
+    }}
+    [data-testid="stSidebarNav"] a:hover {{
+        background: {BORDER_SUBTLE} !important;
+        color: {TEXT_PRIMARY} !important;
+    }}
+    [data-testid="stSidebarNav"] a[aria-selected="true"] {{
+        background: {ACCENT_LIGHT} !important;
+        color: {ACCENT} !important;
+        font-weight: 600 !important;
+    }}
+
+    /* ─── Cards (shadow-on-hover) ─── */
+    [data-testid="stVerticalBlockBorderWrapper"] {{
+        border: none !important;
+        border-radius: 12px !important;
+        box-shadow: {SHADOW_SM} !important;
+        transition: box-shadow 0.2s ease !important;
+    }}
+    [data-testid="stVerticalBlockBorderWrapper"]:hover {{
+        box-shadow: {SHADOW_MD} !important;
+    }}
+
+    /* ─── Pipeline step component ─── */
+    .ac-step {{
         display: flex;
         align-items: center;
-        gap: 1rem;
-        transition: all 0.3s ease;
-    }}
-    
-    .progress-step.running {{
-        border-color: {BYTEPLUS_BLUE};
-        background: #eff6ff;
-    }}
-    
-    .progress-step.complete {{
-        border-color: #10b981;
-        background: #f0fdf4;
-    }}
-    
-    .progress-step.failed {{
-        border-color: #ef4444;
-        background: #fef2f2;
-    }}
-    
-    .step-icon {{
-        font-size: 1.5rem;
-        min-width: 40px;
-        text-align: center;
-    }}
-    
-    .step-message {{
-        font-size: 0.95rem;
-        font-weight: 500;
-        color: #374151;
-    }}
-    
-    /* Video result card */
-    .video-result {{
-        background: #ffffff;
-        border: 2px solid {BYTEPLUS_BLUE};
-        border-radius: 12px;
-        padding: 1.5rem;
-        margin-top: 1.5rem;
-    }}
-    
-    /* Buttons with BytePlus blue */
-    .stButton > button {{
-        border-radius: 8px;
-        font-weight: 600;
-    }}
-    
-    .stButton > button[kind="primary"] {{
-        background-color: {BYTEPLUS_BLUE} !important;
-        border-color: {BYTEPLUS_BLUE} !important;
-    }}
-    
-    /* Image preview */
-    .image-preview {{
-        border: 2px solid #e5e7eb;
-        border-radius: 8px;
-        padding: 0.5rem;
-        background: #f9fafb;
-    }}
-    
-    /* Clean up defaults */
-    #MainMenu {{visibility: hidden;}}
-    footer {{visibility: hidden;}}
-    
-    /* Cost badges */
-    .cost-badge {{
-        display: inline-block;
-        padding: 0.25rem 0.75rem;
-        border-radius: 6px;
+        gap: 0.75rem;
+        padding: 0.75rem 1rem;
         font-size: 0.875rem;
-        font-weight: 600;
-        background: {BYTEPLUS_BLUE}15;
-        color: {BYTEPLUS_BLUE};
+        color: {TEXT_SECONDARY};
+        border-radius: 10px;
+        margin-bottom: 4px;
+        transition: all 0.2s ease;
     }}
+    .ac-step-num {{
+        font-size: 0.7rem;
+        font-weight: 700;
+        color: {TEXT_TERTIARY};
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        min-width: 3.5rem;
+    }}
+    .ac-step-msg {{ flex: 1; font-weight: 500; }}
+    .ac-step-icon {{ font-size: 1rem; min-width: 1.5rem; text-align: center; }}
+    .ac-step.running {{ background: {ACCENT_LIGHT}; }}
+    .ac-step.running .ac-step-icon {{ color: {ACCENT}; font-weight: 700; }}
+    .ac-step.complete {{ background: {SUCCESS_LIGHT}; }}
+    .ac-step.complete .ac-step-icon {{ color: {SUCCESS}; }}
+    .ac-step.failed {{ background: {ERROR_LIGHT}; }}
+    .ac-step.failed .ac-step-icon {{ color: {ERROR}; }}
+
+    /* ─── Metric label override ─── */
+    [data-testid="stMetricLabel"] {{
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        font-size: 0.7rem !important;
+        font-weight: 600 !important;
+    }}
+
+    /* ─── Footer ─── */
+    .ac-footer {{
+        text-align: center;
+        color: {TEXT_TERTIARY};
+        font-size: 0.75rem;
+        padding: 2rem 0 1rem 0;
+        border-top: 1px solid {BORDER};
+        margin-top: 3rem;
+    }}
+    .ac-footer a {{ color: {ACCENT}; text-decoration: none; font-weight: 500; }}
+
+    /* ─── Hide Streamlit defaults ─── */
+    #MainMenu {{ visibility: hidden; }}
+    footer {{ visibility: hidden; }}
 </style>
 """, unsafe_allow_html=True)
 
-# ═══════════════════════════════════════════════════════════════════════════════
-#  HEADER WITH BYTEPLUS LOGO
-# ═══════════════════════════════════════════════════════════════════════════════
+# =============================================================================
+#  NAVIGATION
+# =============================================================================
 
-col_logo, col_title = st.columns([1, 11])
+from pages.campaigns import page as campaigns_page
+from pages.campaign_builder import page as builder_page
+from pages.campaign_results import page as results_page
+from pages.quick_test import page as quick_test_page
+from pages.analytics import page as analytics_page
 
-with col_logo:
-    # BytePlus logo (using styled box with icon)
-    st.markdown(f"""
-    <div style="width: 48px; height: 48px; background: linear-gradient(135deg, {BYTEPLUS_BLUE} 0%, #0052CC 100%); 
-                border-radius: 8px; display: flex; align-items: center; 
-                justify-content: center; font-size: 1.5rem; color: white; box-shadow: 0 2px 8px rgba(0, 102, 255, 0.3);">
-        🎬
-    </div>
-    """, unsafe_allow_html=True)
+pages = {
+    "Campaigns": [
+        st.Page(campaigns_page, title="All Campaigns", icon=":material/campaign:", url_path="campaigns"),
+        st.Page(builder_page, title="New Campaign", icon=":material/add_circle:", url_path="new-campaign"),
+        st.Page(results_page, title="Results", icon=":material/play_circle:", url_path="results"),
+    ],
+    "Tools": [
+        st.Page(quick_test_page, title="Quick Test", icon=":material/science:", url_path="quick-test"),
+        st.Page(analytics_page, title="Analytics", icon=":material/analytics:", url_path="analytics"),
+    ],
+}
 
-with col_title:
-    st.markdown(f"""
-    <div>
-        <h1 style="color: {BYTEPLUS_BLUE}; margin: 0; font-size: 2rem; font-weight: 700;">AdCamp</h1>
-        <p style="color: #6b7280; margin: 0.25rem 0 0 0; font-size: 0.95rem;">
-            AI Video Ad Generation · Powered by <strong style="color: {BYTEPLUS_BLUE};">BytePlus ModelArk</strong>
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
+nav = st.navigation(pages)
+nav.run()
 
-st.divider()
-
-# ═══════════════════════════════════════════════════════════════════════════════
-#  SIDEBAR - SETTINGS
-# ═══════════════════════════════════════════════════════════════════════════════
-
-with st.sidebar:
-    st.markdown("### ⚙️ Settings")
-    
-    sku_tier = st.selectbox(
-        "SKU Tier",
-        ["catalog", "hero"],
-        index=0,
-        format_func=lambda x: f"🌟 Hero (Premium)" if x == "hero" else "📦 Catalog (Optimized)"
-    )
-    
-    st.markdown(f"""
-    <span class="cost-badge">
-        {'$0.13/video' if sku_tier == 'hero' else '$0.08/video'}
-    </span>
-    """, unsafe_allow_html=True)
-    
-    st.markdown("---")
-    
-    resolution = st.select_slider(
-        "Resolution",
-        options=["480p", "720p", "1080p"],
-        value="720p"
-    )
-    
-    duration = st.slider(
-        "Duration (sec)",
-        2, 15, 8
-    )
-    
-    platforms = st.multiselect(
-        "Platforms",
-        ["tiktok", "instagram", "youtube"],
-        default=["tiktok"],
-        format_func=lambda x: {"tiktok": "📱 TikTok", "instagram": "📷 Instagram", "youtube": "▶️ YouTube"}[x]
-    )
-    
-    st.markdown("---")
-    st.caption("💡 **Tip**: Hero tier uses Seedance 1.5 Pro for top SKUs")
-
-# ═══════════════════════════════════════════════════════════════════════════════
-#  MAIN CONTENT - TABS
-# ═══════════════════════════════════════════════════════════════════════════════
-
-tab1, tab2 = st.tabs(["🎬 Generate Video", "📊 Analytics"])
-
-# ─────────────────────────────────────────────────────────────────────────────
-#  TAB 1: VIDEO GENERATION
-# ─────────────────────────────────────────────────────────────────────────────
-
-with tab1:
-    col_left, col_right = st.columns([2, 1], gap="large")
-    
-    with col_left:
-        st.markdown("### 📝 Campaign Details")
-        
-        brief = st.text_area(
-            "Campaign Brief",
-            placeholder="Example: Summer collection launch featuring lightweight running shoes. Target audience: active millennials (25-35). Mood: energetic, aspirational. Setting: sunrise beach run with golden hour lighting. Key message: performance meets style.",
-            height=150,
-            help="Describe your campaign vision, target audience, mood, and key message"
-        )
-        
-        sku_id = st.text_input(
-            "SKU ID",
-            value="SKU-001",
-            placeholder="e.g., SHOE-RUN-2024-001"
-        )
-    
-    with col_right:
-        st.markdown("### 🖼️ Product Image")
-        
-        uploaded_file = st.file_uploader(
-            "Upload Product Image",
-            type=["jpg", "jpeg", "png"],
-            help="Min height: 300px. Optional but improves video quality.",
-            label_visibility="collapsed"
-        )
-        
-        if uploaded_file:
-            image = Image.open(uploaded_file)
-            st.image(image, caption="Product Preview", use_container_width=True)
-            
-            # Check dimensions
-            width, height = image.size
-            if height < 300:
-                st.warning(f"⚠️ Image height ({height}px) is below recommended 300px minimum")
-            else:
-                st.success(f"✓ Image loaded ({width}×{height}px)")
-        else:
-            st.info("💡 **Pro Tip**: Adding a product image improves video relevance and quality")
-    
-    st.divider()
-    
-    # Generate button
-    col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
-    with col_btn2:
-        generate_btn = st.button(
-            "🚀 Generate Video Ad",
-            type="primary",
-            use_container_width=True,
-            disabled=not brief
-        )
-    
-    if not brief and generate_btn:
-        st.error("⚠️ Please enter a campaign brief to continue")
-    
-    # ─── GENERATION FLOW WITH SSE ───
-    if generate_btn and brief:
-        # Upload image to GCS via API if provided
-        image_url = None
-        if uploaded_file:
-            with st.spinner("📤 Uploading product image..."):
-                try:
-                    uploaded_file.seek(0)
-                    files = {"file": (uploaded_file.name, uploaded_file.getvalue(), uploaded_file.type)}
-                    upload_resp = requests.post(f"{API_BASE}/api/upload-image", files=files, timeout=30)
-                    upload_resp.raise_for_status()
-                    image_url = upload_resp.json().get("url")
-                    st.success(f"✓ Image uploaded successfully")
-                except Exception as e:
-                    st.warning(f"⚠️ Image upload failed: {e}. Continuing without image.")
-                    image_url = None
-        
-        payload = {
-            "brief": brief,
-            "product_image_url": image_url,
-            "sku_tier": sku_tier,
-            "sku_id": sku_id,
-            "platforms": platforms,
-            "duration": duration,
-            "resolution": resolution,
-        }
-        
-        # Progress containers
-        progress_container = st.container()
-        script_container = st.container()
-        cost_container = st.container()
-        video_container = st.container()
-        
-        # Connect to SSE endpoint
-        with progress_container:
-            st.markdown("### 🔄 Generation Progress")
-            
-            progress_bar = st.progress(0)
-            
-            # Step status placeholders
-            step_placeholders = {
-                1: st.empty(),
-                2: st.empty(),
-                3: st.empty(),
-                4: st.empty(),
-                5: st.empty(),
-            }
-            
-            try:
-                response = requests.post(
-                    f"{API_BASE}/api/generate-stream",
-                    json=payload,
-                    stream=True,
-                    timeout=360
-                )
-                
-                final_data = {}
-                
-                for line in response.iter_lines():
-                    if line:
-                        line = line.decode('utf-8')
-                        if line.startswith('data: '):
-                            data = json.loads(line[6:])
-                            
-                            step = data.get('step')
-                            status = data.get('status')
-                            message = data.get('message', '')
-                            progress = data.get('progress', 0)
-                            
-                            # Update progress bar
-                            progress_bar.progress(progress / 100)
-                            
-                            # Update step status
-                            if step and step in step_placeholders:
-                                css_class = status if status in ['running', 'complete', 'failed'] else ''
-                                icon = _get_step_icon(status)
-                                step_placeholders[step].markdown(f"""
-                                <div class="progress-step {css_class}">
-                                    <div class="step-icon">{icon}</div>
-                                    <div class="step-message">{message}</div>
-                                </div>
-                                """, unsafe_allow_html=True)
-                            
-                            # Store final data
-                            if 'data' in data:
-                                final_data.update(data['data'])
-                            
-                            # Check for completion or error
-                            if status == 'complete' and step == 5:
-                                break
-                            elif status in ['failed', 'error', 'timeout']:
-                                st.error(f"❌ {message}")
-                                st.stop()
-                
-                # Show script
-                with script_container:
-                    st.divider()
-                    if 'script' in final_data:
-                        script_data = final_data['script']
-                        with st.expander("📝 View Generated Script", expanded=False):
-                            st.write("**Ad Copy:**", script_data.get('ad_copy', 'N/A'))
-                            st.caption(script_data.get('scene_description', ''))
-                
-                # Show cost
-                with cost_container:
-                    if 'cost' in final_data:
-                        cost_data = final_data['cost']
-                        col1, col2, col3 = st.columns(3)
-                        
-                        with col1:
-                            st.metric("Script Cost", f"${cost_data.get('script_cost_usd', 0):.4f}")
-                        with col2:
-                            st.metric("Video Cost", f"${cost_data.get('video_cost_usd', 0):.4f}")
-                        with col3:
-                            st.metric("Total Cost", f"${cost_data.get('total_cost_usd', 0):.4f}")
-                
-                # Show video
-                with video_container:
-                    st.divider()
-                    if 'video_url' in final_data:
-                        st.markdown(f"""
-                        <div class="video-result">
-                            <h3 style="color: {BYTEPLUS_BLUE}; margin-top: 0;">✅ Video Generated Successfully!</h3>
-                        </div>
-                        """, unsafe_allow_html=True)
-                        
-                        st.video(final_data['video_url'])
-                        st.link_button("⬇️ Download Video", final_data['video_url'])
-                        
-                        st.success("🎉 Your video is ready! Generate platform variants using the post-processing API.")
-                
-            except requests.exceptions.Timeout:
-                st.error("❌ Request timeout. Please try again.")
-            except Exception as e:
-                st.error(f"❌ Error: {str(e)}")
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-#  TAB 2: ANALYTICS
-# ─────────────────────────────────────────────────────────────────────────────
-
-with tab2:
-    st.markdown("### 📊 Production Analytics")
-    
-    if st.button("🔄 Refresh Analytics", use_container_width=False):
-        try:
-            cost_resp = requests.get(f"{API_BASE}/api/cost-summary", timeout=10)
-            cost_resp.raise_for_status()
-            summary = cost_resp.json()
-            
-            # Key metrics
-            col1, col2, col3, col4 = st.columns(4)
-            
-            with col1:
-                st.metric("Total Videos", summary.get("total_videos", 0))
-            with col2:
-                st.metric("Avg Cost/Video", f"${summary.get('avg_cost_per_video', 0):.4f}")
-            with col3:
-                st.metric("Hero Videos", summary.get("hero_videos", 0))
-            with col4:
-                st.metric("Catalog Videos", summary.get("catalog_videos", 0))
-            
-            st.divider()
-            
-            # Cost breakdown
-            col_left, col_right = st.columns(2)
-            
-            with col_left:
-                st.markdown("#### 💰 Cost Summary")
-                total_cost = summary.get('total_cost_usd', 0)
-                st.metric("Total Spend", f"${total_cost:.2f}")
-                
-                hero_videos = summary.get("hero_videos", 0)
-                catalog_videos = summary.get("catalog_videos", 0)
-                total_videos = hero_videos + catalog_videos
-                
-                if total_videos > 0:
-                    hero_pct = (hero_videos / total_videos) * 100
-                    catalog_pct = (catalog_videos / total_videos) * 100
-                    
-                    st.progress(hero_pct / 100, text=f"🌟 Hero: {hero_pct:.1f}%")
-                    st.progress(catalog_pct / 100, text=f"📦 Catalog: {catalog_pct:.1f}%")
-            
-            with col_right:
-                st.markdown("#### 🎯 Performance vs Target")
-                target_cost = 0.16
-                avg_cost = summary.get('avg_cost_per_video', 0)
-                
-                if avg_cost > 0:
-                    savings = ((target_cost - avg_cost) / target_cost) * 100
-                    
-                    if savings > 0:
-                        st.success(f"✅ **{savings:.1f}% under target**")
-                        st.caption(f"Saving ${target_cost - avg_cost:.4f} per video")
-                    else:
-                        st.warning(f"⚠️ **{abs(savings):.1f}% over target**")
-                    
-                    st.caption(f"Target: ${target_cost}/video · Actual: ${avg_cost:.4f}/video")
-                else:
-                    st.info("Generate videos to see performance metrics")
-        
-        except Exception as e:
-            st.error(f"Unable to load analytics: {str(e)}")
-
-# ═══════════════════════════════════════════════════════════════════════════════
+# =============================================================================
 #  FOOTER
-# ═══════════════════════════════════════════════════════════════════════════════
+# =============================================================================
 
-st.divider()
-col1, col2, col3 = st.columns(3)
-
-with col1:
-    st.caption(f"🎬 AdCamp v1.1 · BytePlus ModelArk")
-
-with col2:
-    api_docs_url = f"{API_BASE}/docs"
-    st.caption(f"📖 [API Docs]({api_docs_url})")
-
-with col3:
-    st.caption("Powered by Seed 1.8 & Seedance")
+api_docs_url = f"{API_BASE}/docs"
+st.markdown(f"""
+<div class="ac-footer">
+    AdCamp v2.0 &middot; Powered by BytePlus ModelArk &middot;
+    <a href="{api_docs_url}" target="_blank">API Docs</a>
+</div>
+""", unsafe_allow_html=True)
