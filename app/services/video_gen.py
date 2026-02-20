@@ -38,6 +38,7 @@ async def create_video_task(
     duration: int = 5,
     resolution: str = "720p",
     ratio: str = "16:9",
+    sound: bool = True,
 ) -> str:
     """
     Create an async video generation task via
@@ -59,6 +60,7 @@ async def create_video_task(
         "ratio": ratio,
         "duration": duration,
         "watermark": False,
+        "sound": sound,
     }
 
     try:
