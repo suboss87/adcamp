@@ -9,15 +9,29 @@
 
 ---
 
-## Why This Exists
+## What This Is
 
-Every organization scaling AI content generation hits the same problem: **not every request deserves your most expensive model.** A luxury property listing needs cinematic video quality. A standard rental listing needs good-enough video, fast and cheap. A flagship course needs premium voiceover. A quick tutorial needs functional TTS.
+A **working reference architecture** for AI content generation at scale — implemented as a video pipeline on [BytePlus ModelArk](https://www.byteplus.com/en/product/modelark), but designed so the patterns transfer to any AI workload (image, audio, text).
 
-Yet most AI pipelines treat every request identically — same model, same cost, same latency. At scale (thousands of items across multiple formats), this becomes a **cost and speed bottleneck**.
+Clone it, study the five patterns inside, and adapt them to your own pipeline.
 
-**AdCamp solves this with tiered model routing** — automatically directing each workload to the right AI model based on its business value, with async pipeline infrastructure, cost tracking, batch orchestration, and resilience patterns you can adapt for your own deployment.
+## The Problem
 
-Implemented as a **video generation pipeline** on BytePlus ModelArk, but the architecture patterns apply to any AI content workload.
+Most AI pipelines treat every request the same — same model, same cost, same latency. That works at small scale. At thousands of items, it becomes a **cost and speed bottleneck**: your hero products don't need to share a queue with long-tail catalog items, and your most expensive model shouldn't process both.
+
+## Who This Is For
+
+- **AI/ML engineers** building content generation pipelines who need cost control at scale
+- **Backend engineers** integrating async AI APIs (ModelArk, OpenAI, Stability) and need retry, polling, and batch patterns
+- **Solution architects** evaluating tiered model routing for e-commerce, real estate, media, or any inventory with varying business value
+
+## How to Use It
+
+| Approach | What You Do |
+|----------|-------------|
+| **Study the patterns** | Read the 5 pattern files (marked with stars in Project Structure) — each is self-contained |
+| **Run the demo** | Clone, add API key, `make dev` — generate videos through the dashboard or API |
+| **Adapt for your use case** | Change 4 files (tiers, models, pricing, API call) — the pipeline, retry, batch, and cost tracking work as-is |
 
 ## Architecture
 
