@@ -254,15 +254,29 @@ adcamp/
 
 ## Adapting for Your Use Case
 
-To use this architecture with a different AI workload:
+You change **4 files** — everything else (pipeline, retry, batch, cost tracking, API, dashboard) works as-is.
 
-1. **Define your tiers** — Edit `app/models/schemas.py:SKUTier` with your business tiers
-2. **Update the router** — Edit `app/services/model_router.py` to map tiers to your ModelArk models
-3. **Replace the generation step** — Swap `video_gen.py` with your AI API (image gen, audio, etc.)
-4. **Adjust cost constants** — Update `app/config.py` with your model's token pricing
-5. **Customize the dashboard** — Edit `dashboard/sections.py` for your domain
+| Step | File | What You Change |
+|------|------|----------------|
+| 1 | `app/models/schemas.py` | Rename tiers to your domain (e.g. `luxury` / `standard`) |
+| 2 | `app/config.py` | Set your model IDs and token pricing |
+| 3 | `app/services/model_router.py` | Map your tiers → your models (already 3 lines) |
+| 4 | `app/services/video_gen.py` | Swap API call if not using ModelArk (keep same signature) |
 
-The pipeline orchestration, retry logic, batch processing, cost tracking, and API layer remain unchanged.
+**Example — Real estate platform** with 50K listings:
+
+```python
+# schemas.py — rename tiers
+class SKUTier(str, Enum):
+    luxury = "luxury"      # $1M+ properties → cinematic video
+    standard = "standard"  # rental listings → fast, cheap video
+
+# config.py — your pricing (or keep defaults for ModelArk)
+cost_per_m_seedance_pro: float = 1.20   # luxury tier rate
+cost_per_m_seedance_fast: float = 0.70  # standard tier rate
+```
+
+That's it. The pipeline routes luxury listings to the premium model, standard listings to the fast model, tracks costs per listing, and batches 50K listings with concurrency control — all without touching the infrastructure code.
 
 ## Testing
 
