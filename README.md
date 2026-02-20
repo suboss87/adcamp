@@ -140,6 +140,8 @@ Blended (20/80 split): ~$0.33/video
 
 > Token formula: `(Width x Height x FPS x Duration) / 1024 x Coefficient` — [BytePlus pricing docs](https://docs.byteplus.com/en/docs/ModelArk/1544106)
 
+> **Seedance 2.0 Note**: BytePlus is rolling out Seedance 2.0 with per-second billing (replacing per-token for video). This architecture adapts easily — update model IDs and cost constants in `app/config.py`. The routing, pipeline, and cost-tracking patterns remain unchanged.
+
 ### Cost at Scale
 
 | Scale | Items | Videos/Year | Annual Cost | vs Manual Production |
@@ -188,6 +190,13 @@ python3 examples/generate_single_video.py
 | **Resilience** | Custom `@retry_with_backoff` | Exponential backoff, rate-limit honoring |
 | **Deployment** | Docker, GCP Cloud Run, Terraform | Multi-platform with IaC |
 | **Monitoring** | Prometheus-compatible `/metrics` | Cost tracking, request counts, health checks |
+
+### Dashboard
+
+<!-- TODO: Add a screenshot of the Streamlit dashboard here -->
+<!-- <img width="1166" alt="AdCamp Dashboard" src="docs/images/dashboard.png" /> -->
+
+The Streamlit dashboard provides campaign management, A/B model comparison, and real-time cost analytics. Run it locally with `make dev` (port 8501).
 
 ## API Endpoints
 
@@ -270,6 +279,7 @@ pytest tests/unit/test_csv_parser.py -v      # CSV parser tests only
 - **[CONTRIBUTING.md](CONTRIBUTING.md)** — Contribution guidelines
 - **[examples/](examples/)** — Runnable Python scripts
 - **API Docs** — http://localhost:8000/docs (Swagger) / http://localhost:8000/redoc
+- **Community** — [awesome-seedance](https://github.com/ZeroLu/awesome-seedance) (prompts, tutorials, and resources for Seedance models)
 
 ## Contributing
 

@@ -35,7 +35,7 @@ class Settings(BaseSettings):
 
     # --- Storage ---
     output_dir: Path = Path("output")
-    gcs_bucket: str = "adcamp-uploads-487609"
+    gcs_bucket: str = "your-gcs-bucket-name"
 
     model_config = {"env_file": ".env", "extra": "ignore"}
 
