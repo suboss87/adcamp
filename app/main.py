@@ -21,8 +21,11 @@ from app.models.schemas import (
     SKUTier,
     VideoTaskStatus,
 )
-from app.services import cost_tracker, model_router, script_writer, video_gen
+from app.services import cost_tracker, video_gen
+from app.services import firestore_client
+from app.services.pipeline import run_pipeline
 from app import monitoring
+from app.routes.campaigns import router as campaigns_router
 from app.utils.retry import validate_api_key, InvalidAPIKeyError
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
@@ -73,69 +76,26 @@ app.add_middleware(
 
 app.mount("/output", StaticFiles(directory=str(settings.output_dir)), name="output")
 
+# Register campaign routes
+app.include_router(campaigns_router)
+
 # Lazy import for GCS (used by /api/upload-image)
 from google.cloud import storage
 
 
 # ─── Shared Pipeline Helpers ─────────────────────────────────────────────────────
 
-def _estimate_video_tokens(duration: int, resolution: str) -> int:
-    """Estimate video tokens: (W * H * FPS * Duration) / 1024."""
-    res_map = {"480p": (854, 480), "720p": (1280, 720), "1080p": (1920, 1080)}
-    w, h = res_map.get(resolution, (1280, 720))
-    fps = 24
-    return int((w * h * fps * duration) / 1024)
-
-
 async def _run_pipeline(req: GenerateRequest) -> dict:
-    """Execute the 4-step pipeline (script → route → video → cost).
-    Returns dict with script, model_id, cost_per_m, task_id, cost, in_tokens, out_tokens.
-    """
-    # Step 2: Script generation via Seed 1.8
-    logger.info("Step 2: Seed 1.8 — Generating ad script for SKU %s...", req.sku_id)
-    script_start = time.time()
-    script, in_tokens, out_tokens = await script_writer.generate_script(req.brief)
-    monitoring.record_duration("script_generation_duration_seconds", time.time() - script_start)
-
-    # Step 3: Smart Model Router
-    logger.info("Step 3: Routing SKU %s (tier=%s)...", req.sku_id, req.sku_tier.value)
-    model_id, cost_per_m = model_router.route(req.sku_tier)
-
-    # Step 4: Video generation via Seedance
-    primary_platform = req.platforms[0].value if req.platforms else "tiktok"
-    ratio = video_gen._RATIO_MAP.get(primary_platform, "16:9")
-    logger.info("Step 4: Seedance — Creating video task with %s (ratio=%s)...", model_id, ratio)
-    video_start = time.time()
-    task_id = await video_gen.create_video_task(
-        prompt=script.video_prompt,
-        model_id=model_id,
-        image_url=req.product_image_url,
+    """Thin wrapper: unpack GenerateRequest and call the extracted pipeline."""
+    return await run_pipeline(
+        brief=req.brief,
+        sku_tier=req.sku_tier,
+        sku_id=req.sku_id,
+        product_image_url=req.product_image_url,
+        platforms=[p.value for p in req.platforms] if req.platforms else ["tiktok"],
         duration=req.duration,
         resolution=req.resolution,
-        ratio=ratio,
     )
-    monitoring.record_duration("video_generation_duration_seconds", time.time() - video_start)
-
-    # Calculate cost
-    est_video_tokens = _estimate_video_tokens(req.duration, req.resolution)
-    cost = cost_tracker.calculate_cost(
-        script_input_tokens=in_tokens,
-        script_output_tokens=out_tokens,
-        video_tokens=est_video_tokens,
-        model_used=model_id,
-        cost_per_m=cost_per_m,
-        sku_tier=req.sku_tier,
-    )
-
-    return {
-        "script": script,
-        "model_id": model_id,
-        "cost_per_m": cost_per_m,
-        "task_id": task_id,
-        "cost": cost,
-        "in_tokens": in_tokens,
-        "out_tokens": out_tokens,
-    }
 
 
 def _track_success_metrics(cost_usd: float, sku_tier: SKUTier):
@@ -149,8 +109,15 @@ def _track_success_metrics(cost_usd: float, sku_tier: SKUTier):
 
 @app.on_event("startup")
 async def startup_event():
-    """Validate configuration on startup."""
+    """Validate configuration and initialize services on startup."""
     logger.info("Starting AdCamp D2C Video Ad Pipeline...")
+
+    # Initialize Firestore
+    try:
+        firestore_client.init()
+        logger.info("Firestore initialized")
+    except Exception as e:
+        logger.warning("Firestore init failed (continuing without persistence): %s", e)
     
     # Validate API key
     if not settings.ark_api_key:
