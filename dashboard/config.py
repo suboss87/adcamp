@@ -6,7 +6,7 @@ import os
 
 API_BASE = os.getenv(
     "API_URL",
-    "https://adcamp-api-309502792454.asia-southeast1.run.app",
+    "http://localhost:8000",
 )
 
 # ─── Design System (Linear / Vercel inspired) ────────────────────────────────

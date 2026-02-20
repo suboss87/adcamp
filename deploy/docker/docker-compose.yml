@@ -25,7 +25,7 @@ services:
   dashboard:
     build:
       context: ../..
-      dockerfile: Dockerfile
+      dockerfile: deploy/docker/Dockerfile.dashboard
     container_name: adcamp-dashboard
     command: ["streamlit", "run", "dashboard/app.py", "--server.port", "8501", "--server.address", "0.0.0.0"]
     ports:
