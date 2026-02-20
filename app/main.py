@@ -67,6 +67,7 @@ app = FastAPI(
     },
 )
 
+# CORS: wide-open for demo/reference use. Restrict allow_origins in production.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -135,10 +136,10 @@ async def startup_event():
     except Exception as e:
         logger.warning(f"⚠️  Could not validate API key (continuing anyway): {e}")
     
-    logger.info("Configured models:")
-    logger.info(f"  Script: {settings.script_model}")
-    logger.info(f"  Video Pro: {settings.video_model_pro} ($1.20/M)")
-    logger.info(f"  Video Fast: {settings.video_model_fast} ($0.70/M)")
+    logger.debug("Configured models:")
+    logger.debug(f"  Script: {settings.script_model}")
+    logger.debug(f"  Video Pro: {settings.video_model_pro} ($1.20/M)")
+    logger.debug(f"  Video Fast: {settings.video_model_fast} ($0.70/M)")
     logger.info("Pipeline ready 🚀")
 
 

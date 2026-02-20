@@ -22,6 +22,15 @@ _HEADERS = {
 }
 
 
+# Normalize ModelArk status strings to canonical form
+_STATUS_MAP = {
+    "succeeded": "Succeeded",
+    "failed": "Failed",
+    "processing": "Running",
+    "queued": "Running",
+    "running": "Running",
+}
+
 # Aspect-ratio map for platforms
 _RATIO_MAP = {
     "tiktok": "9:16",
@@ -105,14 +114,6 @@ async def get_video_status(task_id: str, model_used: str = "") -> VideoTaskStatu
         error = parse_modelark_error(e.response)
         logger.error(f"Failed to get video status for {task_id}: {error}")
         raise
-
-    _STATUS_MAP = {
-        "succeeded": "Succeeded",
-        "failed": "Failed",
-        "processing": "Running",
-        "queued": "Running",
-        "running": "Running",
-    }
 
     raw_status = data.get("status", "Unknown")
     status = _STATUS_MAP.get(raw_status, raw_status)
