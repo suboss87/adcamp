@@ -1,285 +1,213 @@
-# AdCamp: D2C Video Ad Pipeline 🎬
+# AdCamp: AI Video Ad Pipeline for D2C E-Commerce
 
 [![BytePlus ModelArk](https://img.shields.io/badge/BytePlus-ModelArk-blue)](https://www.byteplus.com/en/product/modelark)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
-[![Docker](https://img.shields.io/badge/docker-ready-blue)](https://www.docker.com/)
-[![Kubernetes](https://img.shields.io/badge/kubernetes-ready-326CE5)](https://kubernetes.io/)
+[![Tests](https://img.shields.io/badge/tests-13%20passing-brightgreen)]()
 
-**Enterprise-ready AI video generation pipeline** for e-commerce at scale. Generate platform-optimized product videos using BytePlus ModelArk's Seed and Seedance models.
-
-🎯 **Target Cost**: $0.16/video | 💰 **Achieved**: $0.08/video | ⚡ **Speed**: ~30s/video | 📊 **Scale**: 34,500+ videos/year
+> **Built by [Subash Natarajan](https://www.linkedin.com/in/subashn/)** — Reference architecture for cost-optimized AI video generation at scale.
 
 ---
 
-## 🌟 Key Features
+## The Problem
 
-- **Smart Model Routing**: Automatically routes Hero SKUs (top 20%) to premium Seedance Pro, Catalog SKUs (80%) to cost-optimized Pro Fast
-- **Multi-Platform Output**: Generates TikTok (9:16), Instagram (1:1), YouTube (16:9) variants with FFmpeg post-processing
-- **Cost-Optimized**: 50% under target cost — $35K/year savings vs Sora, $10K vs Runway
-- **Production-Ready**: Docker + Kubernetes manifests for BytePlus VKE deployment
-- **Observable**: Health checks, cost tracking, structured logging
-- **Scalable**: Horizontal autoscaling, load balancing, async video generation
+D2C e-commerce brands manage **thousands of SKUs** across TikTok, Instagram, and YouTube — each platform demanding its own video format. Manually producing product videos costs **$50-500 per video** through agencies, or **$5-15 per video** using tools like Runway/Sora that don't understand SKU economics. A brand with 2,500 products refreshing content quarterly would spend **$35,000-125,000/year** on video production alone.
 
-## 🏗️ Architecture
+**The real insight**: not every product deserves the same video quality. Your top 20% hero products (driving 80% of revenue) need cinematic quality. The other 80% of your catalog just needs good-enough video, fast and cheap.
 
-### Logical Architecture
-<img width="1166" height="330" alt="Screenshot 2026-02-20 at 10 27 54" src="https://github.com/user-attachments/assets/b94bff18-f54d-4962-858e-b4d866afa79a" />
+## The Solution
 
-### Pipeline Flow
+AdCamp is a **production-ready pipeline** that generates platform-optimized product videos using AI, with intelligent cost routing:
 
-| Step | Component | Function | Model | Cost |
-|------|-----------|----------|-------|------|
+- **Hero SKUs** (top 20% products) route to **Seedance 1.5 Pro** — cinematic quality
+- **Catalog SKUs** (bottom 80%) route to **Seedance 1.0 Pro Fast** — 3x faster, 72% cheaper
+- **AI scriptwriting** (Seed 1.8) generates ad copy automatically from a campaign brief
+- **Multi-platform output** — TikTok (9:16), Instagram (1:1), YouTube (16:9)
+
+**Cost per video: ~$0.33 blended average** (standard BytePlus pricing, 5s 720p with audio)
+
+## Who This Is For
+
+| Audience | Use Case |
+|---|---|
+| **D2C brands** | Automate product video creation for 1,000+ SKU catalogs |
+| **Performance marketing teams** | Generate A/B test variants at near-zero marginal cost |
+| **E-commerce agencies** | White-label video production pipeline for multiple clients |
+| **AI/ML engineers** | Reference architecture for cost-optimized model routing |
+| **Platform teams** | Blueprint for async task pipelines with polling, retry, and observability |
+
+## Architecture
+
+<img width="1166" alt="AdCamp Pipeline Architecture" src="https://github.com/user-attachments/assets/b94bff18-f54d-4962-858e-b4d866afa79a" />
+
+### Pipeline Flow (5 Steps)
+
+| Step | Component | What It Does | Model | Cost |
+|------|-----------|-------------|-------|------|
 | 1 | **Input** | Campaign brief + product image + SKU tier | — | — |
-| 2 | **Script Gen** | Generate ad copy + scene description + video prompt | Seed 1.8 | $0.25/$2.00 per M |
-| 3 | **Smart Router** | Route by SKU tier: Hero → Pro, Catalog → Fast | — | — |
-| 4 | **Video Gen** | Async video generation with polling | Seedance Pro/Fast | $0.70-1.20/M |
-| 5 | **Post-Process** | FFmpeg: generate platform variants | — | — |
-| 6 | **Output** | Platform-ready MP4 files | — | — |
+| 2 | **Script Gen** | AI generates ad copy + video prompt | Seed 1.8 | ~$0.002 |
+| 3 | **Smart Router** | Routes hero vs catalog to different models | — | — |
+| 4 | **Video Gen** | Async video generation with polling | Seedance Pro/Fast | $0.29-0.49 |
+| 5 | **Output** | Platform-ready MP4 via FFmpeg transcoding | — | — |
 
-### Tech Stack
-
-- **Backend**: FastAPI (Python 3.10+), async/await for video polling
-- **Frontend**: Streamlit dashboard for demos
-- **AI Models**: BytePlus ModelArk (Seed 1.8, Seedance 1.5 Pro, Seedance 1.0 Pro Fast)
-- **Video Processing**: FFmpeg for aspect ratio conversion
-- **Deployment**: Docker, Kubernetes (BytePlus VKE), Docker Compose
-- **Observability**: Structured logging, health checks, cost tracking
-
-## 🎯 Smart Model Routing
-
-The core differentiator: automatically route SKUs to the right model based on business importance.
-
-| SKU Tier | Volume | Model | Quality | Speed | Cost/M | Use Case |
-|----------|--------|-------|---------|-------|--------|----------|
-| **Hero** | 20% | Seedance 1.5 Pro | ⭐⭐⭐⭐⭐ | 30s | $1.20 | Flagship products, campaigns |
-| **Catalog** | 80% | Seedance 1.0 Pro Fast | ⭐⭐⭐⭐ | 30s | $0.70 | Long-tail inventory |
-| **Script** | 100% | Seed 1.8 | — | 5s | $0.25/$2.00 | Ad copy generation |
-
-### Cost Breakdown Example (5s video, 720p)
+### Smart Routing — The Core Differentiator
 
 ```
-Hero SKU:
-  Script:  $0.002 (Seed 1.8)
-  Video:   $0.130 (Seedance Pro @ $1.20/M)
-  Total:   $0.132/video
+Hero SKUs (20%)  ──▶  Seedance 1.5 Pro     ($1.20/M tokens, cinematic quality)
+                                              ~$0.49/video (5s, 720p, audio)
 
-Catalog SKU:
-  Script:  $0.002 (Seed 1.8)
-  Video:   $0.076 (Seedance Pro Fast @ $0.70/M)
-  Total:   $0.078/video
+Catalog SKUs (80%) ──▶  Seedance 1.0 Pro Fast ($0.70/M tokens, 3x faster)
+                                              ~$0.29/video (5s, 720p, audio)
 
-Blended (20/80 mix): $0.089/video
+Blended average (20/80 mix): ~$0.33/video
 ```
 
-## 🚀 Quick Start
+> Token formula: `(Width x Height x FPS x Duration) / 1024 x Coefficient` — [BytePlus docs](https://docs.byteplus.com/en/docs/ModelArk/1544106)
 
-### 5-Minute Setup
+### Cost at Scale
+
+| Scale | Videos/Year | Annual Cost | vs Manual ($50/video) |
+|-------|-------------|-------------|----------------------|
+| Small catalog (500 SKUs) | ~6,900 | ~$2,277 | Save $342,723 |
+| Medium catalog (2,500 SKUs) | ~34,500 | ~$11,385 | Save $1,713,615 |
+| Large catalog (10,000 SKUs) | ~138,000 | ~$45,540 | Save $6,854,460 |
+
+*Assumes 3 platforms x 30% monthly refresh x 12 months + 25% buffer.*
+
+Enterprise/promotional pricing from BytePlus can reduce costs further — contact BytePlus for volume discounts.
+
+---
+
+## Quick Start
 
 ```bash
-# Clone and setup
+# Clone
 git clone https://github.com/suboss87/adcamp.git
 cd adcamp
+
+# Install
 make install
 
-# Configure API key
+# Configure — add your BytePlus ModelArk API key
 cp .env.example .env
-# Edit .env and add your ModelArk API key
+# Edit .env: ARK_API_KEY=your_key_here
 
-# Start development servers
+# Run (API on :8000, Dashboard on :8501)
 make dev
-# API: http://localhost:8000
-# Dashboard: http://localhost:8501
 ```
 
-### Deployment Options
-
-| Platform | Setup Time | Free Tier | Best For | Guide |
-|----------|------------|-----------|----------|-------|
-| **Docker Compose** | 5 min | ✅ | Local dev | [Guide](deploy/docker/) |
-| **Railway** | 10 min | ❌ ($5/mo) | Demos | [Guide](deploy/railway/) |
-| **GCP Cloud Run** | 20 min | ✅ | Production | [Guide](deploy/gcp/) |
-| **AWS ECS** | 30 min | ✅ (12mo) | AWS ecosystem | [Guide](deploy/aws/) |
-| **BytePlus VKE** | 45 min | ❌ | BytePlus-native | [Guide](deploy/byteplus/) |
-
-**Full comparison**: See [deploy/README.md](deploy/README.md)
-
-## 📡 API Reference
-
-### Core Endpoints
-
-#### `POST /api/generate`
-Generate a video ad from campaign brief.
-
-**Request**:
-```json
-{
-  "brief": "Summer running campaign, energetic vibes, golden hour",
-  "sku_tier": "catalog",
-  "sku_id": "SHOE-001",
-  "platforms": ["tiktok"],
-  "duration": 5
-}
+**Generate your first video:**
+```bash
+python3 examples/generate_single_video.py
 ```
 
-**Response**:
-```json
-{
-  "task_id": "cgt-20260216...",
-  "status": "Processing",
-  "script": {
-    "ad_copy": "Own the golden hour...",
-    "video_prompt": "A runner in lightweight gear..."
-  },
-  "cost": {
-    "total_cost_usd": 0.078
-  }
-}
-```
+**Interactive API docs:** http://localhost:8000/docs
 
-#### `GET /api/status/{task_id}`
-Poll video generation status.
-
-#### `GET /api/wait/{task_id}`
-Block until video is ready (for demos/testing).
-
-#### `GET /api/cost-summary`
-Aggregate cost tracking across all videos.
-
-#### `GET /health`
-Health check with model configuration.
-
-**Interactive Docs**: http://localhost:8000/docs (FastAPI Swagger UI)
-
-## 💰 Cost Analysis
-
-### Target vs Achieved
-
-| Metric | Target | Achieved | Status |
-|--------|--------|----------|--------|
-| Cost per video | $0.16 | **$0.08** | ✅ 50% under |
-| Generation time | <60s | **~30s** | ✅ 2x faster |
-| Quality (brand approval) | 80%+ | **TBD** | 🔄 Testing |
-
-### Annual ROI (34,500 videos/year)
-
-```
-2,500 SKUs × 3 platforms × 30% monthly refresh
-= 2,500 × 3 × 0.3 × 12 = 27,000 videos/year
-+ 25% buffer = 34,500 videos
-
-ModelArk Total:  34,500 × $0.08 = $2,760/year ✅
-
-Savings vs alternatives:
-  vs Sora (OpenAI):     $37,760/year
-  vs Runway Gen-3:      $12,760/year  
-  vs Kling AI:          $18,760/year
-```
-
-### Cost Drivers
-
-1. **Script Generation (Seed 1.8)**: ~2% of total cost
-2. **Video Generation**: 98% of cost
-   - Hero SKUs (20%): $0.132/video
-   - Catalog (80%): $0.078/video
-3. **Post-Processing (FFmpeg)**: Negligible (compute only)
-
-## 🎯 Use Cases
-
-### E-commerce
-- **Product launches**: Generate hero videos for new SKUs
-- **Seasonal campaigns**: Batch-generate videos for sales events
-- **A/B testing**: Create multiple variants for performance testing
-- **Catalog refresh**: Keep long-tail inventory visually updated
-
-### D2C Brands
-- **Social media ads**: Platform-optimized creatives (TikTok, IG, YouTube)
-- **Email campaigns**: Embedded video for higher engagement
-- **Landing pages**: Dynamic product showcases
-
-### Agencies
-- **Client deliverables**: Rapid video production for multiple brands
-- **Pitch decks**: Quick concept visualization
-
-## 📊 Performance Metrics
-
-- **Throughput**: 120 videos/hour (single instance)
-- **Concurrency**: 2-10 parallel video generations (API rate limit dependent)
-- **Availability**: 99.9% (ModelArk SLA)
-- **Latency**: 
-  - Script gen: 5s (Seed 1.8)
-  - Video gen: 15-30s (Seedance)
-  - Post-process: <5s (FFmpeg)
-
-## 🛠️ Technology Stack
+## Tech Stack
 
 | Layer | Technology | Purpose |
-|-------|------------|----------|
-| **AI Models** | BytePlus ModelArk | Seed 1.8, Seedance Pro/Fast |
-| **Backend** | FastAPI | Async API, OpenAPI docs |
-| **Frontend** | Streamlit | Demo dashboard |
-| **Video Processing** | FFmpeg | Platform variant generation |
-| **Container** | Docker | Multi-stage builds |
-| **Orchestration** | Kubernetes | BytePlus VKE deployment |
-| **Observability** | Logging, Health checks | Production monitoring |
+|-------|-----------|---------|
+| **AI Models** | [BytePlus ModelArk](https://www.byteplus.com/en/product/modelark) | Seed 1.8 (scripts), Seedance Pro/Fast (video) |
+| **Backend** | FastAPI + async/await | API server, SSE streaming, async polling |
+| **Dashboard** | Streamlit | Campaign management, A/B comparison, analytics |
+| **Persistence** | Google Firestore | Campaign and product data |
+| **Resilience** | Custom `@retry_with_backoff` | Exponential backoff, rate-limit honoring, error classification |
+| **Deployment** | Docker, GCP Cloud Run, Terraform | Multi-platform with IaC |
+| **Monitoring** | Prometheus-compatible `/metrics` | Cost tracking, request counts, health checks |
 
-## 📚 Documentation
+## API Endpoints
 
-### Getting Started
-- **[Quick Start](docs/getting-started.md)** — 5-minute setup guide
-- **[Examples](examples/)** — Python code examples
-- **[Makefile](Makefile)** — Common commands (`make help`)
+| Endpoint | Method | Purpose |
+|---|---|---|
+| `/api/generate` | POST | Full pipeline — returns task_id for polling |
+| `/api/generate-stream` | POST | Full pipeline with SSE live progress |
+| `/api/status/{task_id}` | GET | Poll video generation status |
+| `/api/wait/{task_id}` | GET | Block until video ready |
+| `/api/campaigns/` | POST | Create a campaign |
+| `/api/campaigns/{id}/products/csv` | POST | Upload product CSV |
+| `/api/campaigns/{id}/generate` | POST | Start batch generation |
+| `/api/cost-summary` | GET | Aggregate cost tracking |
+| `/health` | GET | Health + model config |
+| `/metrics` | GET | Prometheus text format |
 
-### Guides
-- **[Development](docs/guides/development.md)** — Local dev setup
-- **[Testing](docs/guides/testing.md)** — Test suite guide
-- **[Monitoring](docs/guides/monitoring.md)** — Observability setup
-- **[Cost Optimization](docs/guides/cost-optimization.md)** — Reduce spend
+## Deployment
 
-### Architecture
-- **[Overview](docs/architecture/overview.md)** — High-level design
-- **[Logical](docs/architecture/logical.md)** — Component design
-- **[Physical](docs/architecture/physical.md)** — Infrastructure
+| Platform | Setup | Best For | Guide |
+|----------|-------|----------|-------|
+| **Docker Compose** | 5 min | Local development | [deploy/docker/](deploy/docker/) |
+| **GCP Cloud Run** | 20 min | Production (serverless) | [deploy/gcp/](deploy/gcp/) |
+| **Terraform (GCP)** | 30 min | Infrastructure as Code | [deploy/gcp/terraform/](deploy/gcp/terraform/) |
+| **AWS ECS** | 30 min | AWS ecosystem | [deploy/aws/](deploy/aws/) |
+| **Kubernetes** | 45 min | Full control | [deploy/byteplus/](deploy/byteplus/) |
 
-### Deployment
-- **[Deployment Overview](deploy/README.md)** — Platform comparison
-- **[Docker](deploy/docker/)** — Local development
-- **[GCP Cloud Run](deploy/gcp/)** — Serverless deployment
-- **[AWS ECS](deploy/aws/)** — Container orchestration
-- **[BytePlus VKE](deploy/byteplus/)** — Kubernetes on BytePlus
-- **[Terraform](deploy/gcp/terraform/)** — Infrastructure as Code
+**Production quickstart (GCP):**
+```bash
+export GCP_PROJECT_ID=your-gcp-project-id
+make deploy-gcp
+```
 
-### API Reference
-- **Swagger UI**: http://localhost:8000/docs
-- **ReDoc**: http://localhost:8000/redoc
+## Project Structure
 
-## 🤝 Contributing
+```
+adcamp/
+├── app/
+│   ├── main.py                 # FastAPI orchestrator
+│   ├── config.py               # Pydantic Settings (.env)
+│   ├── models/                 # Pydantic schemas
+│   ├── services/
+│   │   ├── script_writer.py    # Seed 1.8 integration (OpenAI-compatible)
+│   │   ├── model_router.py     # Smart tier-based routing
+│   │   ├── video_gen.py        # Seedance async task + polling
+│   │   ├── cost_tracker.py     # Per-video cost aggregation
+│   │   ├── pipeline.py         # Extracted pipeline logic
+│   │   ├── batch_generator.py  # Semaphore-based batch processing
+│   │   ├── brief_generator.py  # AI brief generation per product
+│   │   ├── csv_parser.py       # Product catalog CSV import
+│   │   └── firestore_client.py # Firestore persistence
+│   ├── routes/
+│   │   └── campaigns.py        # Campaign CRUD + batch endpoints
+│   └── utils/
+│       └── retry.py            # @retry_with_backoff decorator
+├── dashboard/
+│   ├── app.py                  # Streamlit single-page app
+│   ├── sections.py             # Tab rendering functions
+│   └── config.py               # Design tokens + API base
+├── deploy/                     # Docker, GCP, AWS, K8s, monitoring
+├── examples/                   # Runnable scripts
+├── tests/                      # Unit tests (13 passing)
+└── docs/                       # Architecture docs + guides
+```
 
-Contributions are welcome! See **[CONTRIBUTING.md](CONTRIBUTING.md)** for guidelines.
+## Testing
 
-Quick start for contributors:
+```bash
+make test                                    # All tests with coverage
+pytest tests/unit/test_model_router.py -v    # Router tests only
+pytest tests/unit/test_csv_parser.py -v      # CSV parser tests only
+```
+
+## Documentation
+
+- **[DEPLOY.md](DEPLOY.md)** — GCP Cloud Run deployment guide
+- **[AGENTS.md](AGENTS.md)** — Detailed architecture for AI coding agents
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** — Contribution guidelines
+- **[examples/](examples/)** — Runnable Python scripts
+- **API Docs** — http://localhost:8000/docs (Swagger) / http://localhost:8000/redoc
+
+## Contributing
+
+Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ```bash
 make install    # Setup environment
-make test       # Run tests
+make test       # Run tests (13 passing)
 make lint       # Check code style
 ```
 
-## 📄 License
+## License
 
-MIT License - see [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- **BytePlus ModelArk** for providing enterprise-grade AI models
-- **FastAPI** for the excellent async framework
-- **Streamlit** for rapid dashboard prototyping
-
-## 📞 Support
-
-- **Issues**: [GitHub Issues](https://github.com/suboss87/adcamp/issues)
-- **BytePlus**: [ModelArk Documentation](https://docs.byteplus.com/modelark)
-- **VKE**: [VKE Documentation](https://docs.byteplus.com/vke)
+MIT License — see [LICENSE](LICENSE).
 
 ---
 
-**Built with ❤️ using BytePlus ModelArk** | [View on GitHub](https://github.com/suboss87/adcamp)
+**Built by [Subash Natarajan](https://www.linkedin.com/in/subashn/)** | Powered by [BytePlus ModelArk](https://www.byteplus.com/en/product/modelark) | [View Source](https://github.com/suboss87/adcamp)
