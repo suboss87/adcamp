@@ -15,7 +15,7 @@ Every organization scaling AI content generation hits the same problem: **not ev
 
 Yet most AI pipelines treat every request identically — same model, same cost, same latency. At scale (thousands of items across multiple formats), this becomes a **cost and speed bottleneck**.
 
-**AdCamp solves this with tiered model routing** — automatically directing each workload to the right AI model based on its business value, while providing the async pipeline infrastructure, cost tracking, batch orchestration, and resilience patterns needed for production deployment.
+**AdCamp solves this with tiered model routing** — automatically directing each workload to the right AI model based on its business value, with async pipeline infrastructure, cost tracking, batch orchestration, and resilience patterns you can adapt for your own deployment.
 
 Implemented as a **video generation pipeline** on BytePlus ModelArk, but the architecture patterns apply to any AI content workload.
 
@@ -23,13 +23,14 @@ Implemented as a **video generation pipeline** on BytePlus ModelArk, but the arc
 
 ```mermaid
 graph LR
-    A[Content Request<br/><i>any item + tier</i>] --> B[Tiered<br/>Model Router]
+    A[Content Request<br/><i>brief + image + tier</i>] --> S[Script Gen<br/><i>AI copy + prompt</i>]
+    S --> B[Tiered<br/>Model Router]
     B -->|Premium Tier| C[High-Quality Model<br/><i>best output</i>]
     B -->|Standard Tier| D[Cost-Optimized Model<br/><i>fast + cheap</i>]
-    C --> E[Post-Processing<br/><i>format adaptation</i>]
-    D --> E
-    E --> F[Multi-Format<br/>Output]
+    C --> F[Output<br/><i>+ cost tracking</i>]
+    D --> F
 
+    style S fill:#10B981,color:#fff,stroke:#059669
     style B fill:#6366F1,color:#fff,stroke:#4F46E5
     style C fill:#8B5CF6,color:#fff,stroke:#7C3AED
     style D fill:#3B82F6,color:#fff,stroke:#2563EB
@@ -117,7 +118,7 @@ The tiered routing pattern applies wherever you have inventory with varying busi
 
 This reference architecture is implemented as a complete video generation pipeline using BytePlus ModelArk's Seed and Seedance models.
 
-<img width="1166" alt="AdCamp Video Pipeline" src="https://github.com/user-attachments/assets/b94bff18-f54d-4962-858e-b4d866afa79a" />
+<!-- TODO: Replace with redrawn pipeline diagram showing: Input → Script Gen (Seed 1.8) → Smart Router → Seedance Pro/Fast → Output -->
 
 ### Pipeline Flow
 
@@ -192,9 +193,6 @@ python3 examples/generate_single_video.py
 | **Monitoring** | Prometheus-compatible `/metrics` (in-memory) | Cost tracking, request counts, health checks |
 
 ### Dashboard
-
-<!-- TODO: Add a screenshot of the Streamlit dashboard here -->
-<!-- <img width="1166" alt="AdCamp Dashboard" src="docs/images/dashboard.png" /> -->
 
 The Streamlit dashboard provides campaign management, A/B model comparison, and real-time cost analytics. Run it locally with `make dev` (port 8501).
 
