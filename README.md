@@ -21,7 +21,21 @@ Implemented as a **video generation pipeline** on BytePlus ModelArk, but the arc
 
 ## Architecture
 
-<img width="1166" alt="AdCamp Pipeline Architecture" src="https://github.com/user-attachments/assets/b94bff18-f54d-4962-858e-b4d866afa79a" />
+```mermaid
+graph LR
+    A[Content Request<br/><i>any item + tier</i>] --> B[Tiered<br/>Model Router]
+    B -->|Premium Tier| C[High-Quality Model<br/><i>best output</i>]
+    B -->|Standard Tier| D[Cost-Optimized Model<br/><i>fast + cheap</i>]
+    C --> E[Post-Processing<br/><i>format adaptation</i>]
+    D --> E
+    E --> F[Multi-Format<br/>Output]
+
+    style B fill:#6366F1,color:#fff,stroke:#4F46E5
+    style C fill:#8B5CF6,color:#fff,stroke:#7C3AED
+    style D fill:#3B82F6,color:#fff,stroke:#2563EB
+```
+
+> **Abstract pattern** — the implementation below uses video generation, but replace any box with your AI workload.
 
 ### Five Reusable Patterns
 
@@ -102,6 +116,8 @@ The tiered routing pattern applies wherever you have inventory with varying busi
 ## Implementation: Video Generation on ModelArk
 
 This reference architecture is implemented as a complete video generation pipeline using BytePlus ModelArk's Seed and Seedance models.
+
+<img width="1166" alt="AdCamp Video Pipeline" src="https://github.com/user-attachments/assets/b94bff18-f54d-4962-858e-b4d866afa79a" />
 
 ### Pipeline Flow
 
