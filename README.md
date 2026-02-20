@@ -9,29 +9,23 @@
 
 ---
 
-## What This Is
+## Why This Was Built
 
-A **working reference architecture** for AI content generation at scale — implemented as a video pipeline on [BytePlus ModelArk](https://www.byteplus.com/en/product/modelark), but designed so the patterns transfer to any AI workload (image, audio, text).
+[BytePlus ModelArk](https://www.byteplus.com/en/product/modelark) gives you powerful AI models — **Seedance Pro** for cinematic quality and **Pro Fast** at 72% lower cost with 3x speed. But the models alone don't solve the real enterprise problem: **how do you use both intelligently across thousands of products?**
 
-Clone it, study the five patterns inside, and adapt them to your own pipeline.
+Your hero products (the top 20% driving revenue) deserve the best model. The other 80% need good-enough video, fast and cheap. Without automation, someone is manually deciding which products get what — or worse, every product gets the expensive model.
 
-## The Problem
+**AdCamp is the implementation blueprint.** It shows how to build a pipeline that automatically routes each product to the right model based on its business value, tracks every dollar spent, batches thousands of items concurrently, and handles API failures gracefully.
 
-Most AI pipelines treat every request the same — same model, same cost, same latency. That works at small scale. At thousands of items, it becomes a **cost and speed bottleneck**: your hero products don't need to share a queue with long-tail catalog items, and your most expensive model shouldn't process both.
+**The result**: ~$0.33/video blended cost (vs $0.49 all-premium). Studio-quality content in seconds, not weeks. At 10,000 SKUs, that's ~$45K/year in AI costs — replacing what would cost millions in manual video production.
 
-## Who This Is For
+## Who Should Fork This
 
-- **AI/ML engineers** building content generation pipelines who need cost control at scale
-- **Backend engineers** integrating async AI APIs (ModelArk, OpenAI, Stability) and need retry, polling, and batch patterns
-- **Solution architects** evaluating tiered model routing for e-commerce, real estate, media, or any inventory with varying business value
-
-## How to Use It
-
-| Approach | What You Do |
-|----------|-------------|
-| **Study the patterns** | Read the 5 pattern files (marked with stars in Project Structure) — each is self-contained |
-| **Run the demo** | Clone, add API key, `make dev` — generate videos through the dashboard or API |
-| **Adapt for your use case** | Change 4 files (tiers, models, pricing, API call) — the pipeline, retry, batch, and cost tracking work as-is |
+| You are... | You need... | AdCamp gives you... |
+|------------|-------------|---------------------|
+| **E-commerce / D2C team** scaling product videos | Cost control across thousands of SKUs | Tiered routing + batch processing, ready to run |
+| **AI engineer** integrating ModelArk (or any AI API) | Retry, polling, cost tracking patterns | 5 production-grade patterns to drop into your pipeline |
+| **Solutions architect** evaluating AI video at scale | Proof that tiered routing works with real numbers | Working demo with cost breakdowns per tier |
 
 ## Architecture
 
