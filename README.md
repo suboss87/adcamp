@@ -24,19 +24,7 @@
 ## 🏗️ Architecture
 
 ### Logical Architecture
-
-```mermaid
-graph LR
-    A[Campaign Brief] --> B[Seed 1.8<br/>Script Gen]
-    B --> C{Smart Router}
-    C -->|Hero 20%| D[Seedance 1.5 Pro<br/>$1.20/M]
-    C -->|Catalog 80%| E[Seedance 1.0 Pro Fast<br/>$0.70/M]
-    D --> F[FFmpeg Post-Process]
-    E --> F
-    F --> G[TikTok 9:16]
-    F --> H[Instagram 1:1]
-    F --> I[YouTube 16:9]
-```
+<img width="1166" height="330" alt="Screenshot 2026-02-20 at 10 27 54" src="https://github.com/user-attachments/assets/b94bff18-f54d-4962-858e-b4d866afa79a" />
 
 ### Pipeline Flow
 
