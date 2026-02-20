@@ -32,7 +32,7 @@ make docker-up                            # docker-compose up
 make docker-down                          # docker-compose down
 
 # Deploy GCP Cloud Run
-export GCP_PROJECT_ID=adcamp-487609 && make deploy-gcp
+export GCP_PROJECT_ID=your-gcp-project-id && make deploy-gcp
 ```
 
 ## Architecture
