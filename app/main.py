@@ -126,19 +126,22 @@ async def startup_event():
     logger.info("Validating ModelArk API key...")
     try:
         await validate_api_key(settings.ark_api_key, settings.ark_base_url)
-        logger.info("✅ ModelArk API key validated successfully")
+        logger.info("ModelArk API key validated successfully")
     except InvalidAPIKeyError as e:
-        logger.error(f"❌ Invalid ModelArk API key: {e}")
+        logger.error("Invalid ModelArk API key: %s", e)
         logger.error("Please check your ARK_API_KEY environment variable")
         raise
     except Exception as e:
-        logger.warning(f"⚠️  Could not validate API key (continuing anyway): {e}")
-    
+        logger.warning(
+            "Could not validate API key at startup (network issue or endpoint unreachable). "
+            "The API key may still be valid — pipeline calls will fail if it is not. Error: %s", e,
+        )
+
     logger.debug("Configured models:")
-    logger.debug(f"  Script: {settings.script_model}")
-    logger.debug(f"  Video Pro: {settings.video_model_pro} ($1.20/M)")
-    logger.debug(f"  Video Fast: {settings.video_model_fast} ($0.70/M)")
-    logger.info("Pipeline ready 🚀")
+    logger.debug("  Script: %s", settings.script_model)
+    logger.debug("  Video Pro: %s ($1.20/M)", settings.video_model_pro)
+    logger.debug("  Video Fast: %s ($0.70/M)", settings.video_model_fast)
+    logger.info("Pipeline ready")
 
 
 # ─── Health ───────────────────────────────────────────────────────────────────────

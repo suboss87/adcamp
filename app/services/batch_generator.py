@@ -38,7 +38,10 @@ async def run_batch(campaign: Campaign, products: list[Product], concurrency: in
             await _process_product(campaign, product)
 
     # Run all products concurrently (bounded by semaphore)
-    await asyncio.gather(*[process_one(p) for p in products], return_exceptions=True)
+    results = await asyncio.gather(*[process_one(p) for p in products], return_exceptions=True)
+    for product, result in zip(products, results):
+        if isinstance(result, Exception):
+            logger.error("Unhandled exception for product %s: %s", product.sku_id, result)
 
     # Determine final campaign status
     updated = await db.get_campaign(campaign.id)
