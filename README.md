@@ -3,9 +3,9 @@
 [![BytePlus ModelArk](https://img.shields.io/badge/Powered%20by-BytePlus%20ModelArk-blue)](https://www.byteplus.com/en/product/modelark)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
-[![Tests](https://img.shields.io/badge/tests-13%20passing-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-42%20passing-brightgreen)]()
 
-> **Built by [Subash Natarajan](https://www.linkedin.com/in/subashn/)** — Production-ready architecture patterns for AI generation at scale.
+> **Built by [Subash Natarajan](https://www.linkedin.com/in/subashn/)** — Reusable architecture patterns for cost-optimized AI generation at scale.
 
 ---
 
@@ -39,7 +39,7 @@ graph LR
 
 ### Five Reusable Patterns
 
-This reference architecture demonstrates five production patterns that transfer to any AI generation pipeline:
+This reference architecture demonstrates five production-grade patterns that transfer to any AI generation pipeline:
 
 #### 1. Tiered Model Routing
 Route workloads to different models based on business value — premium quality for high-value items, cost-optimized for the long tail.
@@ -189,7 +189,7 @@ python3 examples/generate_single_video.py
 | **Persistence** | Google Firestore | Campaign and product data |
 | **Resilience** | Custom `@retry_with_backoff` | Exponential backoff, rate-limit honoring |
 | **Deployment** | Docker, GCP Cloud Run, Terraform | Multi-platform with IaC |
-| **Monitoring** | Prometheus-compatible `/metrics` | Cost tracking, request counts, health checks |
+| **Monitoring** | Prometheus-compatible `/metrics` (in-memory) | Cost tracking, request counts, health checks |
 
 ### Dashboard
 
@@ -248,7 +248,7 @@ adcamp/
 ├── dashboard/                  # Streamlit UI (tabs, A/B comparison)
 ├── deploy/                     # Docker, GCP, AWS, K8s, monitoring
 ├── examples/                   # Runnable scripts
-├── tests/                      # Unit tests (13 passing)
+├── tests/                      # Unit tests (42 passing)
 └── docs/                       # Architecture docs + guides
 ```
 
@@ -281,10 +281,28 @@ That's it. The pipeline routes luxury listings to the premium model, standard li
 ## Testing
 
 ```bash
-make test                                    # All tests with coverage
-pytest tests/unit/test_model_router.py -v    # Router tests only
-pytest tests/unit/test_csv_parser.py -v      # CSV parser tests only
+make test                                    # All 42 tests with coverage
+pytest tests/unit/test_model_router.py -v    # Router tests (Pattern 1)
+pytest tests/unit/test_cost_tracker.py -v    # Cost tracking tests (Pattern 3)
+pytest tests/unit/test_retry.py -v           # Retry/resilience tests (Pattern 5)
+pytest tests/unit/test_pipeline.py -v        # Pipeline integration tests (Patterns 1-3)
+pytest tests/unit/test_csv_parser.py -v      # CSV parser tests
 ```
+
+## Production Considerations
+
+This is a **reference architecture** — it demonstrates the patterns, not a hardened deployment. To take it to production:
+
+| Area | Current (Reference) | Production Recommendation |
+|------|-------------------|--------------------------|
+| **Authentication** | None (open endpoints) | API key middleware or JWT |
+| **Metrics** | In-memory, resets on restart | Prometheus with persistent storage |
+| **Cost tracking** | In-memory list | PostgreSQL or Redis for durable records |
+| **Rate limiting** | None | Per-client limits (e.g., slowapi) |
+| **Secrets** | `.env` file | Cloud secret manager (GCP/AWS SSM) |
+| **Error reporting** | Logging only | Sentry or equivalent |
+
+The five architecture patterns are production-grade in design. The infrastructure around them needs hardening for your specific deployment.
 
 ## Documentation
 
@@ -301,7 +319,7 @@ Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ```bash
 make install    # Setup environment
-make test       # Run tests (13 passing)
+make test       # Run tests (42 passing)
 make lint       # Check code style
 ```
 
