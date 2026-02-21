@@ -20,7 +20,7 @@ make dev
 Generate one product video end-to-end: submit a brief, poll for completion, get the video URL.
 
 ```bash
-python3 examples/generate_single_video.py
+python3 docs/examples/generate_single_video.py
 ```
 
 ### `batch_campaign.py`
@@ -30,7 +30,7 @@ Full campaign workflow: create a campaign, upload a product CSV, trigger batch g
 **Requires Firestore** — set `GOOGLE_APPLICATION_CREDENTIALS` or run in a GCP environment.
 
 ```bash
-python3 examples/batch_campaign.py
+python3 docs/examples/batch_campaign.py
 ```
 
 ## Environment

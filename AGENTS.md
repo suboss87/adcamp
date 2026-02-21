@@ -282,7 +282,7 @@ headers = {
 This repo follows **Google/Kubernetes/Terraform standards**:
 - Platform-separated deployment configs in `deploy/`
 - Layered documentation in `docs/` (architecture, guides, API)
-- Working examples in `examples/`
+- Working examples in `docs/examples/`
 - Test structure in `tests/` (unit, integration, fixtures)
 - Single-entry Makefile for all common tasks
 - Community files: CONTRIBUTING.md, SECURITY.md, CHANGELOG.md
