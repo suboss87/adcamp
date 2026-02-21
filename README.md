@@ -310,7 +310,7 @@ The five architecture patterns are production-grade in design. The infrastructur
 
 ## Documentation
 
-- **[DEPLOY.md](DEPLOY.md)** — GCP Cloud Run deployment guide
+- **[DEPLOY.md](docs/DEPLOY.md)** — GCP Cloud Run deployment guide
 - **[AGENTS.md](AGENTS.md)** — Full architecture reference for AI coding agents
 - **[CONTRIBUTING.md](CONTRIBUTING.md)** — Contribution guidelines
 - **[examples/](docs/examples/)** — Runnable Python scripts
