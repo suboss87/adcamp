@@ -113,7 +113,7 @@ See [DEPLOYMENT.md](./DEPLOYMENT.md) for complete VKE guide.
 
 **Quick deploy**:
 ```bash
-./scripts/deploy-vke.sh production
+./deploy/byteplus/scripts/deploy-vke.sh production
 ```
 
 ---
