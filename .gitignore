@@ -58,8 +58,8 @@ logs/
 .github/workflows/*.log
 
 # Examples output
-examples/*.json
-examples/*.mp4
+docs/examples/*.json
+docs/examples/*.mp4
 
 # Monitoring data (Prometheus, Grafana, AlertManager)
 deploy/monitoring/prometheus-data/

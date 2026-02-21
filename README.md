@@ -181,7 +181,7 @@ make dev
 
 **Generate your first video:**
 ```bash
-python3 examples/generate_single_video.py
+python3 docs/examples/generate_single_video.py
 ```
 
 **Interactive API docs:** http://localhost:8000/docs
@@ -313,7 +313,7 @@ The five architecture patterns are production-grade in design. The infrastructur
 - **[DEPLOY.md](DEPLOY.md)** — GCP Cloud Run deployment guide
 - **[AGENTS.md](AGENTS.md)** — Full architecture reference for AI coding agents
 - **[CONTRIBUTING.md](CONTRIBUTING.md)** — Contribution guidelines
-- **[examples/](examples/)** — Runnable Python scripts
+- **[examples/](docs/examples/)** — Runnable Python scripts
 - **API Docs** — http://localhost:8000/docs (Swagger) / http://localhost:8000/redoc
 - **Community** — [awesome-seedance](https://github.com/ZeroLu/awesome-seedance) (prompts, tutorials, and resources for Seedance models)
 
