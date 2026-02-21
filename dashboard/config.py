@@ -70,8 +70,23 @@ STEP_ICONS = {"running": "&#9679;", "complete": "&#10003;", "failed": "&#10005;"
 def step_indicator(status: str) -> str:
     return STEP_ICONS.get(status, "&#8211;")
 
-COST_LABELS = {"catalog": "~$0.29 / video", "hero": "~$0.49 / video"}
-COST_TARGET_PER_VIDEO = 0.33
+# Cost constants (must match app/config.py)
+_COST_PER_M = {"catalog": 0.70, "hero": 1.20}
+_RES_MAP = {"480p": (854, 480), "720p": (1280, 720), "1080p": (1920, 1080)}
+_SCRIPT_COST_APPROX = 0.001
+
+def estimate_cost(tier: str, duration: int = 5, resolution: str = "720p") -> float:
+    """Estimate per-video cost using the same formula as pipeline.py."""
+    w, h = _RES_MAP.get(resolution, (1280, 720))
+    video_tokens = int((w * h * 24 * duration) / 1024)
+    cost_per_m = _COST_PER_M.get(tier, 0.70)
+    return round((video_tokens / 1_000_000) * cost_per_m + _SCRIPT_COST_APPROX, 4)
+
+def cost_label(tier: str, duration: int = 5, resolution: str = "720p") -> str:
+    """Format estimated cost as a display label."""
+    return f"~${estimate_cost(tier, duration, resolution):.2f} / video"
+
+COST_TARGET_PER_VIDEO = 0.09
 
 STATUS_COLORS = {
     "draft": "gray", "generating": "violet", "completed": "green",

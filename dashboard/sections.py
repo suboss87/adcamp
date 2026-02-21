@@ -13,8 +13,9 @@ from config import (
     ACCENT, ACCENT_LIGHT, ACCENT_MUTED,
     TEXT_3, SIDEBAR_DIM,
     GREEN, GREEN_BG, RED, RED_BG,
-    COST_LABELS,
     COST_TARGET_PER_VIDEO,
+    cost_label,
+    estimate_cost,
     status_badge,
     step_indicator,
     platform_pills_html,
@@ -315,7 +316,7 @@ def render_quick_video():
             )
         with cfg2:
             duration = st.selectbox(
-                "Duration", [2, 4, 6, 8, 10, 12, 15], index=3,
+                "Duration", [2, 4, 6, 8, 10, 12], index=3,
                 format_func=lambda x: f"{x}s",
             )
         with cfg3:
@@ -337,10 +338,10 @@ def render_quick_video():
                     unsafe_allow_html=True,
                 )
         with cfg6:
-            cost_label = COST_LABELS.get(sku_tier, "$0.08 / video")
+            est_label = cost_label(sku_tier, duration, resolution)
             st.markdown(
                 f'<div style="display:flex;justify-content:flex-end;padding-top:1.6rem;">'
-                f'<div class="ac-pill">Est. {cost_label}</div></div>',
+                f'<div class="ac-pill">Est. {est_label}</div></div>',
                 unsafe_allow_html=True,
             )
 
@@ -365,7 +366,7 @@ def render_quick_video():
     }
     _AB_OPTIONS = {
         "sku_tier": ["catalog", "hero"],
-        "duration": [2, 4, 6, 8, 10, 12, 15],
+        "duration": [2, 4, 6, 8, 10, 12],
         "resolution": ["480p", "720p", "1080p"],
         "platforms": ["tiktok", "instagram", "youtube"],
     }
@@ -413,8 +414,8 @@ def render_quick_video():
                     ab_enabled = False
 
             if ab_enabled and ab_field == "sku_tier":
-                cost_a = COST_LABELS.get(sku_tier, "?")
-                cost_b = COST_LABELS.get(ab_variant_b, "?")
+                cost_a = cost_label(sku_tier, duration, resolution)
+                cost_b = cost_label(ab_variant_b, duration, resolution)
                 st.caption(f"A: **{cost_a}** vs B: **{cost_b}**")
             elif ab_enabled:
                 fmt_a = (fmt(current_val) if ab_field != "platforms"
