@@ -8,10 +8,13 @@ import json
 import logging
 import time
 
-from fastapi import FastAPI, HTTPException, Response, UploadFile, File
+from fastapi import FastAPI, HTTPException, Request, Response, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 
 from app.config import settings
 from app.models.schemas import (
@@ -64,13 +67,34 @@ app = FastAPI(
     },
 )
 
-# CORS: wide-open for demo/reference use. Restrict allow_origins in production.
+# Rate limiting: configurable via RATE_LIMIT env var (slowapi format, e.g. "60/minute").
+limiter = Limiter(key_func=get_remote_address, default_limits=[settings.rate_limit])
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# CORS: configurable via CORS_ORIGINS env var (comma-separated).
+# Defaults to "*" for demo/reference use. Restrict in production.
+_cors_origins = [o.strip() for o in settings.cors_origins.split(",")]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_cors_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# API key authentication middleware.
+# When API_KEY is set in env, all /api/* requests require Authorization: Bearer <key>.
+# Health, metrics, and docs endpoints remain open.
+_PUBLIC_PATHS = {"/health", "/health/detailed", "/metrics", "/docs", "/openapi.json", "/redoc"}
+
+@app.middleware("http")
+async def api_key_auth(request: Request, call_next):
+    if settings.api_key and request.url.path.startswith("/api"):
+        auth = request.headers.get("Authorization", "")
+        if auth != f"Bearer {settings.api_key}":
+            return JSONResponse(status_code=401, content={"detail": "Invalid or missing API key"})
+    return await call_next(request)
+
 
 app.mount("/output", StaticFiles(directory=str(settings.output_dir)), name="output")
 
@@ -175,7 +199,8 @@ async def health_detailed():
 # ─── Image Upload Endpoint ───────────────────────────────────────────────────────
 
 @app.post("/api/upload-image")
-async def upload_image(file: UploadFile = File(...)):
+@limiter.limit(settings.rate_limit)
+async def upload_image(request: Request, file: UploadFile = File(...)):
     """Upload an image to GCS and return a public URL.
     Expects content-type image/jpeg or image/png.
     """
@@ -183,6 +208,12 @@ async def upload_image(file: UploadFile = File(...)):
         content = await file.read()
         if len(content) == 0:
             raise HTTPException(status_code=400, detail="Empty file")
+        max_bytes = settings.max_upload_size_mb * 1024 * 1024
+        if len(content) > max_bytes:
+            raise HTTPException(
+                status_code=413,
+                detail=f"File too large ({len(content) / 1024 / 1024:.1f}MB). Max: {settings.max_upload_size_mb}MB",
+            )
         if file.content_type not in ("image/jpeg", "image/png", "image/jpg"):
             raise HTTPException(status_code=400, detail="Only JPG/PNG supported")
 
@@ -207,7 +238,8 @@ async def upload_image(file: UploadFile = File(...)):
 # ─── Full Pipeline (Steps 1-4) ──────────────────────────────────────────────────
 
 @app.post("/api/generate", response_model=GenerateResponse)
-async def generate_ad(req: GenerateRequest):
+@limiter.limit(settings.rate_limit)
+async def generate_ad(request: Request, req: GenerateRequest):
     """
     Video Generation Pipeline:
     1. INPUT:        Campaign brief + product image + SKU tier
@@ -274,7 +306,8 @@ async def get_cost_summary():
 # ─── Streaming Generation (SSE for live progress) ────────────────────────────────
 
 @app.post("/api/generate-stream")
-async def generate_ad_stream(req: GenerateRequest):
+@limiter.limit(settings.rate_limit)
+async def generate_ad_stream(request: Request, req: GenerateRequest):
     """
     Video Generation Pipeline with Server-Sent Events (SSE) for live progress.
     Streams progress updates to the frontend in real-time.
