@@ -3,10 +3,12 @@ AdCamp — FastAPI Application
 AI-Powered Video Generation at Scale with BytePlus ModelArk.
 Implements the 5-step pipeline: Input → Script Gen → Smart Router → Video Gen → Output.
 """
+
 import asyncio
 import json
 import logging
-import time
+import os
+import uuid
 
 from fastapi import FastAPI, HTTPException, Request, Response, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
@@ -31,7 +33,9 @@ from app import monitoring
 from app.routes.campaigns import router as campaigns_router
 from app.utils.retry import validate_api_key, InvalidAPIKeyError
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(
@@ -85,14 +89,24 @@ app.add_middleware(
 # API key authentication middleware.
 # When API_KEY is set in env, all /api/* requests require Authorization: Bearer <key>.
 # Health, metrics, and docs endpoints remain open.
-_PUBLIC_PATHS = {"/health", "/health/detailed", "/metrics", "/docs", "/openapi.json", "/redoc"}
+_PUBLIC_PATHS = {
+    "/health",
+    "/health/detailed",
+    "/metrics",
+    "/docs",
+    "/openapi.json",
+    "/redoc",
+}
+
 
 @app.middleware("http")
 async def api_key_auth(request: Request, call_next):
     if settings.api_key and request.url.path.startswith("/api"):
         auth = request.headers.get("Authorization", "")
         if auth != f"Bearer {settings.api_key}":
-            return JSONResponse(status_code=401, content={"detail": "Invalid or missing API key"})
+            return JSONResponse(
+                status_code=401, content={"detail": "Invalid or missing API key"}
+            )
     return await call_next(request)
 
 
@@ -102,10 +116,10 @@ app.mount("/output", StaticFiles(directory=str(settings.output_dir)), name="outp
 app.include_router(campaigns_router)
 
 # Lazy import for GCS (used by /api/upload-image)
-from google.cloud import storage
-
+from google.cloud import storage  # noqa: E402
 
 # ─── Shared Pipeline Helpers ─────────────────────────────────────────────────────
+
 
 async def _run_pipeline(req: GenerateRequest) -> dict:
     """Thin wrapper: unpack GenerateRequest and call the extracted pipeline."""
@@ -129,6 +143,7 @@ def _track_success_metrics(cost_usd: float, sku_tier: SKUTier):
 
 # ─── Startup Events ───────────────────────────────────────────────────────────────
 
+
 @app.on_event("startup")
 async def startup_event():
     """Validate configuration and initialize services on startup."""
@@ -140,12 +155,12 @@ async def startup_event():
         logger.info("Firestore initialized")
     except Exception as e:
         logger.warning("Firestore init failed (continuing without persistence): %s", e)
-    
+
     # Validate API key
     if not settings.ark_api_key:
         logger.error("ARK_API_KEY environment variable is not set!")
         raise InvalidAPIKeyError("ARK_API_KEY is required but not configured")
-    
+
     logger.info("Validating ModelArk API key...")
     try:
         await validate_api_key(settings.ark_api_key, settings.ark_base_url)
@@ -157,7 +172,8 @@ async def startup_event():
     except Exception as e:
         logger.warning(
             "Could not validate API key at startup (network issue or endpoint unreachable). "
-            "The API key may still be valid — pipeline calls will fail if it is not. Error: %s", e,
+            "The API key may still be valid — pipeline calls will fail if it is not. Error: %s",
+            e,
         )
 
     logger.debug("Configured models:")
@@ -168,6 +184,7 @@ async def startup_event():
 
 
 # ─── Health ───────────────────────────────────────────────────────────────────────
+
 
 @app.get("/health")
 async def health():
@@ -198,6 +215,7 @@ async def health_detailed():
 
 # ─── Image Upload Endpoint ───────────────────────────────────────────────────────
 
+
 @app.post("/api/upload-image")
 @limiter.limit(settings.rate_limit)
 async def upload_image(request: Request, file: UploadFile = File(...)):
@@ -217,25 +235,52 @@ async def upload_image(request: Request, file: UploadFile = File(...)):
         if file.content_type not in ("image/jpeg", "image/png", "image/jpg"):
             raise HTTPException(status_code=400, detail="Only JPG/PNG supported")
 
-        # Upload to GCS
+        # Validate magic bytes match declared content type
+        _MAGIC_JPEG = b"\xff\xd8\xff"
+        _MAGIC_PNG = b"\x89PNG\r\n\x1a\n"
+        if content[:3] == _MAGIC_JPEG:
+            detected = "image/jpeg"
+        elif content[:8] == _MAGIC_PNG:
+            detected = "image/png"
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="File content does not match a valid JPEG or PNG image",
+            )
+        if file.content_type == "image/jpg":
+            declared = "image/jpeg"
+        else:
+            declared = file.content_type
+        if detected != declared:
+            raise HTTPException(
+                status_code=400,
+                detail="Content-Type header does not match actual file content",
+            )
+
+        # Upload to GCS — use UUID to prevent directory traversal
         client = storage.Client()
         bucket = client.bucket(settings.gcs_bucket)
-        # Create a unique object name
-        ts = int(time.time())
-        blob_name = f"uploads/{ts}-{file.filename.replace(' ', '_')}"
+        safe_name = (
+            os.path.basename(file.filename or "image") if file.filename else "image"
+        )
+        ext = os.path.splitext(safe_name)[1] or (
+            ".jpg" if detected == "image/jpeg" else ".png"
+        )
+        blob_name = f"uploads/{uuid.uuid4().hex}{ext}"
         blob = bucket.blob(blob_name)
-        blob.upload_from_string(content, content_type=file.content_type)
+        blob.upload_from_string(content, content_type=detected)
         # Make public
         blob.make_public()
         return {"url": blob.public_url}
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception:
         logger.exception("Image upload failed")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Image upload failed")
 
 
 # ─── Full Pipeline (Steps 1-4) ──────────────────────────────────────────────────
+
 
 @app.post("/api/generate", response_model=GenerateResponse)
 @limiter.limit(settings.rate_limit)
@@ -267,22 +312,26 @@ async def generate_ad(request: Request, req: GenerateRequest):
             cost=result["cost"],
         )
 
-    except Exception as e:
+    except Exception:
         monitoring.increment_counter("videos_failed_total")
         logger.exception("Pipeline failed for SKU %s", req.sku_id)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=500,
+            detail="Video generation pipeline failed. Check server logs for details.",
+        )
 
 
 # ─── Video Status ─────────────────────────────────────────────────────────────────
+
 
 @app.get("/api/status/{task_id}", response_model=VideoTaskStatus)
 async def check_status(task_id: str):
     """Poll video generation status."""
     try:
         return await video_gen.get_video_status(task_id)
-    except Exception as e:
-        logger.exception("Status check failed")
-        raise HTTPException(status_code=500, detail=str(e))
+    except Exception:
+        logger.exception("Status check failed for task %s", task_id)
+        raise HTTPException(status_code=500, detail="Failed to check video status")
 
 
 @app.get("/api/wait/{task_id}", response_model=VideoTaskStatus)
@@ -290,12 +339,15 @@ async def wait_for_result(task_id: str):
     """Block until video is ready (for demo/testing)."""
     try:
         return await video_gen.wait_for_video(task_id)
-    except Exception as e:
-        logger.exception("Wait failed")
-        raise HTTPException(status_code=500, detail=str(e))
+    except Exception:
+        logger.exception("Wait failed for task %s", task_id)
+        raise HTTPException(
+            status_code=500, detail="Failed while waiting for video result"
+        )
 
 
 # ─── Cost Summary ─────────────────────────────────────────────────────────────────
+
 
 @app.get("/api/cost-summary", response_model=CostSummary)
 async def get_cost_summary():
@@ -305,6 +357,7 @@ async def get_cost_summary():
 
 # ─── Streaming Generation (SSE for live progress) ────────────────────────────────
 
+
 @app.post("/api/generate-stream")
 @limiter.limit(settings.rate_limit)
 async def generate_ad_stream(request: Request, req: GenerateRequest):
@@ -312,6 +365,7 @@ async def generate_ad_stream(request: Request, req: GenerateRequest):
     Video Generation Pipeline with Server-Sent Events (SSE) for live progress.
     Streams progress updates to the frontend in real-time.
     """
+
     async def event_generator():
         try:
             # Steps 1-4: Run pipeline
@@ -324,7 +378,9 @@ async def generate_ad_stream(request: Request, req: GenerateRequest):
             task_id = result["task_id"]
             model_id = result["model_id"]
 
-            model_name = "Seedance 1.5 Pro" if "1-5" in model_id else "Seedance 1.0 Pro Fast"
+            model_name = (
+                "Seedance 1.5 Pro" if "1-5" in model_id else "Seedance 1.0 Pro Fast"
+            )
             yield f"data: {json.dumps({'step': 2, 'status': 'complete', 'message': 'Script generated', 'progress': 35, 'data': {'script': script.model_dump(), 'tokens': {'input': result['in_tokens'], 'output': result['out_tokens']}}})}\n\n"
             yield f"data: {json.dumps({'step': 3, 'status': 'complete', 'message': f'Routed to {model_name}', 'progress': 45, 'data': {'model': model_id, 'cost_per_m': result['cost_per_m']}})}\n\n"
             yield f"data: {json.dumps({'step': 4, 'status': 'complete', 'message': 'Video task created', 'progress': 55, 'data': {'task_id': task_id}})}\n\n"
@@ -342,10 +398,15 @@ async def generate_ad_stream(request: Request, req: GenerateRequest):
                 if status.status == "Succeeded":
                     _track_success_metrics(result["cost"].total_cost_usd, req.sku_tier)
                     data_final = {
-                        'step': 5, 'status': 'complete',
-                        'message': 'Video generated successfully',
-                        'progress': 100,
-                        'data': {'video_url': status.video_url, 'cost': result["cost"].model_dump(), 'script': script.model_dump()}
+                        "step": 5,
+                        "status": "complete",
+                        "message": "Video generated successfully",
+                        "progress": 100,
+                        "data": {
+                            "video_url": status.video_url,
+                            "cost": result["cost"].model_dump(),
+                            "script": script.model_dump(),
+                        },
                     }
                     yield f"data: {json.dumps(data_final)}\n\n"
                     break
@@ -362,9 +423,9 @@ async def generate_ad_stream(request: Request, req: GenerateRequest):
             else:
                 yield f"data: {json.dumps({'step': 5, 'status': 'timeout', 'message': f'Timeout after {max_wait}s. Task ID: {task_id}', 'progress': 0, 'data': {'task_id': task_id}})}\n\n"
 
-        except Exception as e:
+        except Exception:
             monitoring.increment_counter("videos_failed_total")
             logger.exception("Streaming pipeline failed")
-            yield f"data: {json.dumps({'status': 'error', 'message': f'Error: {str(e)}', 'progress': 0})}\n\n"
+            yield f"data: {json.dumps({'status': 'error', 'message': 'Pipeline error. Check server logs for details.', 'progress': 0})}\n\n"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")

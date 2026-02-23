@@ -205,9 +205,8 @@ For integration tests, use test mode or staging environment to avoid production 
 
 ## Questions?
 
+- **GitHub Issues**: Report bugs, request features
 - **GitHub Discussions**: Ask questions, share ideas
-- **Issues**: Report bugs, request features
-- **Discord**: Join our community (link in README)
 
 ## License
 
