@@ -7,7 +7,8 @@ Implements the 5-step pipeline: Input → Script Gen → Smart Router → Video 
 import asyncio
 import json
 import logging
-import time
+import os
+import uuid
 
 from fastapi import FastAPI, HTTPException, Request, Response, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
@@ -234,22 +235,48 @@ async def upload_image(request: Request, file: UploadFile = File(...)):
         if file.content_type not in ("image/jpeg", "image/png", "image/jpg"):
             raise HTTPException(status_code=400, detail="Only JPG/PNG supported")
 
-        # Upload to GCS
+        # Validate magic bytes match declared content type
+        _MAGIC_JPEG = b"\xff\xd8\xff"
+        _MAGIC_PNG = b"\x89PNG\r\n\x1a\n"
+        if content[:3] == _MAGIC_JPEG:
+            detected = "image/jpeg"
+        elif content[:8] == _MAGIC_PNG:
+            detected = "image/png"
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="File content does not match a valid JPEG or PNG image",
+            )
+        if file.content_type == "image/jpg":
+            declared = "image/jpeg"
+        else:
+            declared = file.content_type
+        if detected != declared:
+            raise HTTPException(
+                status_code=400,
+                detail="Content-Type header does not match actual file content",
+            )
+
+        # Upload to GCS — use UUID to prevent directory traversal
         client = storage.Client()
         bucket = client.bucket(settings.gcs_bucket)
-        # Create a unique object name
-        ts = int(time.time())
-        blob_name = f"uploads/{ts}-{file.filename.replace(' ', '_')}"
+        safe_name = (
+            os.path.basename(file.filename or "image") if file.filename else "image"
+        )
+        ext = os.path.splitext(safe_name)[1] or (
+            ".jpg" if detected == "image/jpeg" else ".png"
+        )
+        blob_name = f"uploads/{uuid.uuid4().hex}{ext}"
         blob = bucket.blob(blob_name)
-        blob.upload_from_string(content, content_type=file.content_type)
+        blob.upload_from_string(content, content_type=detected)
         # Make public
         blob.make_public()
         return {"url": blob.public_url}
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception:
         logger.exception("Image upload failed")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Image upload failed")
 
 
 # ─── Full Pipeline (Steps 1-4) ──────────────────────────────────────────────────
@@ -285,10 +312,13 @@ async def generate_ad(request: Request, req: GenerateRequest):
             cost=result["cost"],
         )
 
-    except Exception as e:
+    except Exception:
         monitoring.increment_counter("videos_failed_total")
         logger.exception("Pipeline failed for SKU %s", req.sku_id)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=500,
+            detail="Video generation pipeline failed. Check server logs for details.",
+        )
 
 
 # ─── Video Status ─────────────────────────────────────────────────────────────────
@@ -299,9 +329,9 @@ async def check_status(task_id: str):
     """Poll video generation status."""
     try:
         return await video_gen.get_video_status(task_id)
-    except Exception as e:
-        logger.exception("Status check failed")
-        raise HTTPException(status_code=500, detail=str(e))
+    except Exception:
+        logger.exception("Status check failed for task %s", task_id)
+        raise HTTPException(status_code=500, detail="Failed to check video status")
 
 
 @app.get("/api/wait/{task_id}", response_model=VideoTaskStatus)
@@ -309,9 +339,11 @@ async def wait_for_result(task_id: str):
     """Block until video is ready (for demo/testing)."""
     try:
         return await video_gen.wait_for_video(task_id)
-    except Exception as e:
-        logger.exception("Wait failed")
-        raise HTTPException(status_code=500, detail=str(e))
+    except Exception:
+        logger.exception("Wait failed for task %s", task_id)
+        raise HTTPException(
+            status_code=500, detail="Failed while waiting for video result"
+        )
 
 
 # ─── Cost Summary ─────────────────────────────────────────────────────────────────
@@ -391,9 +423,9 @@ async def generate_ad_stream(request: Request, req: GenerateRequest):
             else:
                 yield f"data: {json.dumps({'step': 5, 'status': 'timeout', 'message': f'Timeout after {max_wait}s. Task ID: {task_id}', 'progress': 0, 'data': {'task_id': task_id}})}\n\n"
 
-        except Exception as e:
+        except Exception:
             monitoring.increment_counter("videos_failed_total")
             logger.exception("Streaming pipeline failed")
-            yield f"data: {json.dumps({'status': 'error', 'message': f'Error: {str(e)}', 'progress': 0})}\n\n"
+            yield f"data: {json.dumps({'status': 'error', 'message': 'Pipeline error. Check server logs for details.', 'progress': 0})}\n\n"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
