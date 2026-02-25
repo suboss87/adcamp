@@ -10,7 +10,13 @@ from typing import Optional
 
 from app.config import settings
 from app.models.schemas import SKUTier
-from app.services import cost_tracker, model_router, script_writer, video_gen, safety_evaluator
+from app.services import (
+    cost_tracker,
+    model_router,
+    script_writer,
+    video_gen,
+    safety_evaluator,
+)
 from app import monitoring
 
 logger = logging.getLogger(__name__)

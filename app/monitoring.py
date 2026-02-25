@@ -64,9 +64,7 @@ def get_metrics() -> Dict[str, Any]:
         "safety_checks_total": _metrics["safety_checks_total"],
         "safety_flagged_total": _metrics["safety_flagged_total"],
         "safety_blocked_total": _metrics["safety_blocked_total"],
-        "safety_eval_avg_seconds": round(
-            _avg("safety_eval_duration_seconds"), 2
-        ),
+        "safety_eval_avg_seconds": round(_avg("safety_eval_duration_seconds"), 2),
         "total_cost_usd": cost_summary.total_cost_usd,
         "avg_cost_per_video": cost_summary.avg_cost_per_video,
         "hero_videos": cost_summary.hero_videos,

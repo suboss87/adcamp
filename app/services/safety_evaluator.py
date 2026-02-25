@@ -124,7 +124,11 @@ async def evaluate_content_safety(
         data = {
             "overall_score": 0.0,
             "categories": [
-                {"name": cat, "score": 0.0, "explanation": "Parse error — defaulting to safe"}
+                {
+                    "name": cat,
+                    "score": 0.0,
+                    "explanation": "Parse error — defaulting to safe",
+                }
                 for cat in SAFETY_CATEGORIES
             ],
             "flagged_issues": [],
