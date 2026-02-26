@@ -2,5 +2,5 @@
 # Install with: pip install -r requirements-gcp.txt
 -r requirements.txt
 
-google-cloud-storage==2.19.0
+google-cloud-storage==3.9.0
 google-cloud-firestore>=2.16.0
