@@ -25,7 +25,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Grafana datasource auto-provisioning
   - Example Slack/Email/PagerDuty notification configs
 - Makefile commands: `make monitoring-up` and `make monitoring-down`
-- AGENTS.md updated with AWS and monitoring documentation
 - Enterprise repository structure with platform-specific deployment guides
 - Deployment configs for GCP Cloud Run, AWS ECS, BytePlus VKE, Railway, Render, Docker Compose
 - Terraform templates for infrastructure as code (GCP, AWS, BytePlus)
