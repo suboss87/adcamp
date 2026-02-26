@@ -1,5 +1,5 @@
 # Multi-stage build for optimized production image
-FROM python:3.10-slim AS builder
+FROM python:3.14-slim AS builder
 
 WORKDIR /build
 
@@ -13,7 +13,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 
 # Production stage
-FROM python:3.10-slim
+FROM python:3.14-slim
 
 # Create non-root user
 RUN groupadd --gid 1000 appuser \
