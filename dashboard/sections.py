@@ -11,21 +11,11 @@ from PIL import Image
 
 from config import (
     API_BASE,
-    ACCENT,
-    ACCENT_LIGHT,
-    ACCENT_MUTED,
-    TEXT_3,
-    SIDEBAR_DIM,
-    GREEN,
-    GREEN_BG,
-    RED,
-    RED_BG,
     COST_TARGET_PER_VIDEO,
     cost_label,
-    estimate_cost,
+    platform_pills_html,
     status_badge,
     step_indicator,
-    platform_pills_html,
 )
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -326,22 +316,21 @@ def _render_ab_comparison(result_a: dict, result_b: dict, label_a: str, label_b:
     st.markdown("#### A/B Comparison")
     col_a, col_b = st.columns(2)
     for col, result, label in [(col_a, result_a, label_a), (col_b, result_b, label_b)]:
-        with col:
-            with st.container(border=True):
-                st.markdown(f"**{label}**")
-                if not result:
-                    st.warning("Generation failed")
-                    continue
-                if "video_url" in result:
-                    st.video(result["video_url"])
-                    st.link_button("Download", result["video_url"], use_container_width=True)
-                cost = result.get("cost", {})
-                total = cost.get("total_cost_usd", 0)
-                st.metric("Total Cost", f"${total:.4f}")
-                script = result.get("script", {})
-                ad_copy = script.get("ad_copy", "")
-                if ad_copy:
-                    st.caption(ad_copy[:120])
+        with col, st.container(border=True):
+            st.markdown(f"**{label}**")
+            if not result:
+                st.warning("Generation failed")
+                continue
+            if "video_url" in result:
+                st.video(result["video_url"])
+                st.link_button("Download", result["video_url"], use_container_width=True)
+            cost = result.get("cost", {})
+            total = cost.get("total_cost_usd", 0)
+            st.metric("Total Cost", f"${total:.4f}")
+            script = result.get("script", {})
+            ad_copy = script.get("ad_copy", "")
+            if ad_copy:
+                st.caption(ad_copy[:120])
 
     cost_a = result_a.get("cost", {}).get("total_cost_usd", 0) if result_a else 0
     cost_b = result_b.get("cost", {}).get("total_cost_usd", 0) if result_b else 0
@@ -633,103 +622,101 @@ def render_campaign_batch():
 
     left, right = st.columns(2)
 
-    with left:
-        with st.container(border=True):
-            st.markdown("**Create New**")
-            name = st.text_input("Name", placeholder="e.g. Summer 2025 Collection", key="cb_name")
-            theme = st.text_area(
-                "Theme",
-                placeholder="Describe the overall mood, aesthetic, and message...",
-                height=80,
-                key="cb_theme",
+    with left, st.container(border=True):
+        st.markdown("**Create New**")
+        name = st.text_input("Name", placeholder="e.g. Summer 2025 Collection", key="cb_name")
+        theme = st.text_area(
+            "Theme",
+            placeholder="Describe the overall mood, aesthetic, and message...",
+            height=80,
+            key="cb_theme",
+        )
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            platforms = st.multiselect(
+                "Platforms",
+                ["tiktok", "instagram", "youtube"],
+                default=["tiktok"],
+                format_func=str.capitalize,
+                key="cb_platforms",
             )
-            c1, c2, c3 = st.columns(3)
-            with c1:
-                platforms = st.multiselect(
-                    "Platforms",
-                    ["tiktok", "instagram", "youtube"],
-                    default=["tiktok"],
-                    format_func=str.capitalize,
-                    key="cb_platforms",
-                )
-                if platforms:
-                    st.markdown(
-                        f'<div style="display:flex;gap:0.35rem;flex-wrap:wrap;margin-top:-0.3rem;">'
-                        f"{platform_pills_html(platforms)}</div>",
-                        unsafe_allow_html=True,
-                    )
-            with c2:
-                duration = st.selectbox(
-                    "Duration",
-                    [2, 4, 6, 8, 10, 12],
-                    index=3,
-                    format_func=lambda x: f"{x}s",
-                    key="cb_duration",
-                )
-            with c3:
-                resolution = st.selectbox(
-                    "Resolution",
-                    ["480p", "720p", "1080p"],
-                    index=1,
-                    key="cb_resolution",
-                )
-
-            if st.button(
-                "Create Campaign",
-                type="primary",
-                disabled=not (name and theme),
-                key="cb_create",
-                use_container_width=True,
-            ):
-                try:
-                    resp = requests.post(
-                        f"{API_BASE}/api/campaigns",
-                        json={
-                            "name": name,
-                            "theme": theme,
-                            "platforms": platforms,
-                            "duration": duration,
-                            "resolution": resolution,
-                        },
-                        timeout=10,
-                    )
-                    resp.raise_for_status()
-                    new_id = resp.json()["id"]
-                    st.session_state["active_campaign_id"] = new_id
-                    st.session_state["_refresh_campaigns"] = True
-                    st.toast("Campaign created!", icon=":material/check_circle:")
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"Failed: {e}")
-
-    with right:
-        with st.container(border=True):
-            st.markdown("**Or Load Existing**")
-            if campaigns:
-                campaign_options = {c["id"]: c["name"] for c in campaigns}
-                ids = list(campaign_options.keys())
-                default_idx = ids.index(active_id) if active_id in ids else 0
-                selected_id = st.selectbox(
-                    "Select Campaign",
-                    ids,
-                    index=default_idx,
-                    format_func=lambda x: campaign_options.get(x, x),
-                    key="cb_select",
-                )
-                if st.button("Load Campaign", use_container_width=True, key="cb_load"):
-                    st.session_state["active_campaign_id"] = selected_id
-                    st.rerun()
-            else:
+            if platforms:
                 st.markdown(
-                    """
+                    f'<div style="display:flex;gap:0.35rem;flex-wrap:wrap;margin-top:-0.3rem;">'
+                    f"{platform_pills_html(platforms)}</div>",
+                    unsafe_allow_html=True,
+                )
+        with c2:
+            duration = st.selectbox(
+                "Duration",
+                [2, 4, 6, 8, 10, 12],
+                index=3,
+                format_func=lambda x: f"{x}s",
+                key="cb_duration",
+            )
+        with c3:
+            resolution = st.selectbox(
+                "Resolution",
+                ["480p", "720p", "1080p"],
+                index=1,
+                key="cb_resolution",
+            )
+
+        if st.button(
+            "Create Campaign",
+            type="primary",
+            disabled=not (name and theme),
+            key="cb_create",
+            use_container_width=True,
+        ):
+            try:
+                resp = requests.post(
+                    f"{API_BASE}/api/campaigns",
+                    json={
+                        "name": name,
+                        "theme": theme,
+                        "platforms": platforms,
+                        "duration": duration,
+                        "resolution": resolution,
+                    },
+                    timeout=10,
+                )
+                resp.raise_for_status()
+                new_id = resp.json()["id"]
+                st.session_state["active_campaign_id"] = new_id
+                st.session_state["_refresh_campaigns"] = True
+                st.toast("Campaign created!", icon=":material/check_circle:")
+                st.rerun()
+            except Exception as e:
+                st.error(f"Failed: {e}")
+
+    with right, st.container(border=True):
+        st.markdown("**Or Load Existing**")
+        if campaigns:
+            campaign_options = {c["id"]: c["name"] for c in campaigns}
+            ids = list(campaign_options.keys())
+            default_idx = ids.index(active_id) if active_id in ids else 0
+            selected_id = st.selectbox(
+                "Select Campaign",
+                ids,
+                index=default_idx,
+                format_func=lambda x: campaign_options.get(x, x),
+                key="cb_select",
+            )
+            if st.button("Load Campaign", use_container_width=True, key="cb_load"):
+                st.session_state["active_campaign_id"] = selected_id
+                st.rerun()
+        else:
+            st.markdown(
+                """
                 <div class="ac-empty">
                     <div class="ac-empty-icon">&#128203;</div>
                     <div class="ac-empty-title">No campaigns yet</div>
                     <div class="ac-empty-desc">Create your first campaign to get started.</div>
                 </div>
                 """,
-                    unsafe_allow_html=True,
-                )
+                unsafe_allow_html=True,
+            )
 
     if not active_id:
         return
@@ -860,31 +847,30 @@ def _render_campaign_results(campaign_id: str):
                 if idx >= len(completed):
                     break
                 result = completed[idx]
-                with col:
-                    with st.container(border=True):
-                        video_url = result.get("video_url")
-                        if video_url:
-                            st.video(video_url)
+                with col, st.container(border=True):
+                    video_url = result.get("video_url")
+                    if video_url:
+                        st.video(video_url)
 
-                        product_id = result.get("product_id", "N/A")
-                        st.caption(f"SKU: `{product_id}`")
+                    product_id = result.get("product_id", "N/A")
+                    st.caption(f"SKU: `{product_id}`")
 
-                        script = result.get("script", {})
-                        if script:
-                            ad_copy = script.get("ad_copy", "")
-                            if ad_copy:
-                                st.markdown(f"**{ad_copy}**")
-                            scene = script.get("scene_description", "")
-                            if scene:
-                                st.caption(scene[:120])
+                    script = result.get("script", {})
+                    if script:
+                        ad_copy = script.get("ad_copy", "")
+                        if ad_copy:
+                            st.markdown(f"**{ad_copy}**")
+                        scene = script.get("scene_description", "")
+                        if scene:
+                            st.caption(scene[:120])
 
-                        cost = result.get("cost", {})
-                        model = result.get("model_used", "N/A")
-                        cost_val = cost.get("total_cost_usd", 0) if cost else 0
-                        st.caption(f"{model} — ${cost_val:.4f}")
+                    cost = result.get("cost", {})
+                    model = result.get("model_used", "N/A")
+                    cost_val = cost.get("total_cost_usd", 0) if cost else 0
+                    st.caption(f"{model} — ${cost_val:.4f}")
 
-                        if video_url:
-                            st.link_button("Download", video_url, use_container_width=True)
+                    if video_url:
+                        st.link_button("Download", video_url, use_container_width=True)
 
     if failed:
         with st.expander(f"Failed ({len(failed)})"):
@@ -1017,14 +1003,13 @@ def render_campaign_history():
 
                 ac1, ac2 = st.columns(2)
                 with ac1:
-                    if done > 0:
-                        if st.button(
-                            "View Results",
-                            key=f"hist_view_{c['id']}",
-                            use_container_width=True,
-                        ):
-                            st.session_state["active_campaign_id"] = c["id"]
-                            st.rerun()
+                    if done > 0 and st.button(
+                        "View Results",
+                        key=f"hist_view_{c['id']}",
+                        use_container_width=True,
+                    ):
+                        st.session_state["active_campaign_id"] = c["id"]
+                        st.rerun()
                 with ac2:
                     if st.button("Delete", key=f"hist_del_{c['id']}", use_container_width=True):
                         _confirm_delete(c["id"], c["name"])

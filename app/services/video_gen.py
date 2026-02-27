@@ -21,6 +21,10 @@ _HEADERS = {
     "Content-Type": "application/json",
 }
 
+# Module-level client for connection reuse across requests.
+# Created once at import time (this module is only imported when dry_run=False).
+_client = httpx.AsyncClient(timeout=httpx.Timeout(90.0, connect=10.0))
+
 
 # Normalize ModelArk status strings to canonical form
 _STATUS_MAP = {
@@ -32,7 +36,7 @@ _STATUS_MAP = {
 }
 
 # Aspect-ratio map for platforms
-_RATIO_MAP = {
+RATIO_MAP = {
     "tiktok": "9:16",
     "instagram": "1:1",
     "youtube": "16:9",
@@ -73,14 +77,13 @@ async def create_video_task(
     }
 
     try:
-        async with httpx.AsyncClient(timeout=90) as client:  # Increased timeout for large videos
-            resp = await client.post(
-                f"{_BASE}/contents/generations/tasks",
-                headers=_HEADERS,
-                json=payload,
-            )
-            resp.raise_for_status()
-            data = resp.json()
+        resp = await _client.post(
+            f"{_BASE}/contents/generations/tasks",
+            headers=_HEADERS,
+            json=payload,
+        )
+        resp.raise_for_status()
+        data = resp.json()
     except httpx.HTTPStatusError as e:
         # Parse ModelArk-specific error for better logging
         error = parse_modelark_error(e.response)
@@ -103,13 +106,12 @@ async def get_video_status(task_id: str, model_used: str = "") -> VideoTaskStatu
     Automatically retries on transient failures.
     """
     try:
-        async with httpx.AsyncClient(timeout=30) as client:
-            resp = await client.get(
-                f"{_BASE}/contents/generations/tasks/{task_id}",
-                headers=_HEADERS,
-            )
-            resp.raise_for_status()
-            data = resp.json()
+        resp = await _client.get(
+            f"{_BASE}/contents/generations/tasks/{task_id}",
+            headers=_HEADERS,
+        )
+        resp.raise_for_status()
+        data = resp.json()
     except httpx.HTTPStatusError as e:
         error = parse_modelark_error(e.response)
         logger.error("Failed to get video status for %s: %s", task_id, error)

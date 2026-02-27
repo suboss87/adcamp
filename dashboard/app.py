@@ -3,46 +3,41 @@ AdCamp — AI Video Ad Generation Dashboard
 """
 
 import streamlit as st
+from sections import (
+    render_campaign_batch,
+    render_campaign_history,
+    render_quick_video,
+    render_sidebar_analytics,
+)
 
 from config import (
     ACCENT,
+    ACCENT_GRAD,
     ACCENT_HOVER,
     ACCENT_LIGHT,
     ACCENT_MUTED,
-    ACCENT_GRAD,
-    SIDEBAR_BG,
-    SIDEBAR_CARD,
-    SIDEBAR_BORDER,
-    SIDEBAR_TEXT,
-    SIDEBAR_DIM,
-    BG_PAGE,
+    API_BASE,
     BG_CARD,
+    BG_PAGE,
     BG_SURFACE,
-    BG_HOVER,
     BORDER,
     BORDER_LIGHT,
+    GREEN,
+    GREEN_BG,
+    RADIUS,
+    RADIUS_SM,
+    RED,
+    RED_BG,
+    SHADOW_MD,
+    SHADOW_SM,
+    SIDEBAR_BG,
+    SIDEBAR_BORDER,
+    SIDEBAR_CARD,
+    SIDEBAR_DIM,
+    SIDEBAR_TEXT,
     TEXT,
     TEXT_2,
     TEXT_3,
-    GREEN,
-    GREEN_BG,
-    RED,
-    RED_BG,
-    AMBER,
-    AMBER_BG,
-    SHADOW_SM,
-    SHADOW_MD,
-    SHADOW_LG,
-    RADIUS,
-    RADIUS_SM,
-    RADIUS_LG,
-    API_BASE,
-)
-from sections import (
-    render_sidebar_analytics,
-    render_quick_video,
-    render_campaign_batch,
-    render_campaign_history,
 )
 
 st.set_page_config(

@@ -17,6 +17,8 @@ from app.utils.retry import retry_with_backoff
 
 logger = logging.getLogger(__name__)
 
+# Client created at import time — API key is captured once. This module is only
+# imported when dry_run=False, so the key is always valid at import time.
 _client = AsyncOpenAI(
     api_key=settings.ark_api_key,
     base_url=settings.ark_base_url,

@@ -3,20 +3,21 @@
 Verifies: error classification, retry vs no-retry behavior, backoff exhaustion.
 Uses httpx.Response mocks — no real network calls.
 """
-import pytest
+
 import httpx
+import pytest
 
 from app.utils.retry import (
-    parse_modelark_error,
-    retry_with_backoff,
     InvalidAPIKeyError,
+    ModelArkAPIError,
     QuotaExceededError,
     RateLimitError,
-    ModelArkAPIError,
+    parse_modelark_error,
+    retry_with_backoff,
 )
 
-
 # ── Error Classification ──────────────────────────────────────────────────────
+
 
 class TestParseModelarkError:
     """Verify HTTP responses map to the correct exception type."""
@@ -24,6 +25,7 @@ class TestParseModelarkError:
     def _make_response(self, status_code: int, body: dict) -> httpx.Response:
         """Build a fake httpx.Response with a JSON body."""
         import json
+
         resp = httpx.Response(
             status_code=status_code,
             content=json.dumps(body).encode(),
@@ -43,7 +45,9 @@ class TestParseModelarkError:
         assert isinstance(err, RateLimitError)
 
     def test_403_with_quota_returns_quota_exceeded(self):
-        resp = self._make_response(403, {"error": {"message": "quota hit", "code": "quota_exceeded"}})
+        resp = self._make_response(
+            403, {"error": {"message": "quota hit", "code": "quota_exceeded"}}
+        )
         err = parse_modelark_error(resp)
         assert isinstance(err, QuotaExceededError)
 
@@ -61,6 +65,7 @@ class TestParseModelarkError:
 
 
 # ── Retry Behavior ────────────────────────────────────────────────────────────
+
 
 class TestRetryWithBackoff:
     """Verify retry/no-retry logic with fast delays (initial_delay=0.01)."""
@@ -101,6 +106,7 @@ class TestRetryWithBackoff:
             nonlocal call_count
             call_count += 1
             import json
+
             resp = httpx.Response(
                 401,
                 content=json.dumps({"error": {"message": "invalid key", "code": ""}}).encode(),
@@ -121,9 +127,12 @@ class TestRetryWithBackoff:
             nonlocal call_count
             call_count += 1
             import json
+
             resp = httpx.Response(
                 403,
-                content=json.dumps({"error": {"message": "quota", "code": "quota_exceeded"}}).encode(),
+                content=json.dumps(
+                    {"error": {"message": "quota", "code": "quota_exceeded"}}
+                ).encode(),
                 headers={"content-type": "application/json"},
                 request=httpx.Request("POST", "https://test.example.com"),
             )

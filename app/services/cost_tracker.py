@@ -10,7 +10,8 @@ from app.models.schemas import CostBreakdown, CostSummary, SKUTier
 
 logger = logging.getLogger(__name__)
 
-# In-memory store (replace with DB in production)
+# In-memory store — safe under single-process asyncio (cooperative multitasking).
+# For multi-worker deployments, replace with a database or shared store.
 _history: list[dict] = []
 
 

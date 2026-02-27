@@ -16,6 +16,8 @@ from app.utils.retry import retry_with_backoff
 
 logger = logging.getLogger(__name__)
 
+# Client created at import time — API key is captured once. This module is only
+# imported when dry_run=False, so the key is always valid at import time.
 _client = AsyncOpenAI(
     api_key=settings.ark_api_key,
     base_url=settings.ark_base_url,
@@ -68,7 +70,7 @@ def _classify_risk(
     """Classify risk level based on score and configured thresholds."""
     if score >= settings.safety_threshold_block:
         return "blocked"
-    if score >= 0.6:
+    if score >= settings.safety_threshold_high_risk:
         return "high_risk"
     if score >= settings.safety_threshold_flag:
         return "low_risk"

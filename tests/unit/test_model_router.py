@@ -1,4 +1,5 @@
 """Tests for the Smart Model Router (Step 3 of the pipeline)."""
+
 import pytest
 
 from app.models.schemas import SKUTier

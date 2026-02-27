@@ -91,12 +91,18 @@ async def _process_product(campaign: Campaign, product: Product):
 
     try:
         # Stage A: Generate brief
-        brief, _, _ = await brief_generator.generate_brief(
+        brief, brief_in_tokens, brief_out_tokens = await brief_generator.generate_brief(
             campaign_theme=campaign.theme,
             product_name=product.product_name,
             description=product.description,
             sku_tier=product.sku_tier,
             category=product.category,
+        )
+        logger.info(
+            "Brief generated for %s (%d in, %d out tokens)",
+            product.sku_id,
+            brief_in_tokens,
+            brief_out_tokens,
         )
         await db.update_product_status(product.id, ProductStatus.generating, brief=brief)
 
@@ -110,6 +116,14 @@ async def _process_product(campaign: Campaign, product: Product):
             platforms=campaign.platforms,
             duration=campaign.duration,
             resolution=campaign.resolution,
+        )
+
+        # Add brief generation cost to the pipeline cost breakdown
+        brief_cost = (brief_in_tokens / 1_000_000) * settings.cost_per_m_seed18_input + (
+            brief_out_tokens / 1_000_000
+        ) * settings.cost_per_m_seed18_output
+        pipeline_result["cost"].total_cost_usd = round(
+            pipeline_result["cost"].total_cost_usd + brief_cost, 6
         )
 
         task_id = pipeline_result["task_id"]

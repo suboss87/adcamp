@@ -44,7 +44,7 @@ async def generate_script(brief: str) -> tuple[AdScript, int, int]:
 # ─── Video Generation Stub ───────────────────────────────────────────────────────
 
 # Aspect-ratio map (mirrors real video_gen)
-_RATIO_MAP = {
+RATIO_MAP = {
     "tiktok": "9:16",
     "instagram": "1:1",
     "youtube": "16:9",

@@ -3,6 +3,7 @@ Campaign API Routes
 CRUD operations, CSV upload, batch generation, progress polling, results.
 """
 
+import asyncio
 import logging
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
@@ -22,6 +23,16 @@ from app.services.persistence import db
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/campaigns", tags=["campaigns"])
+
+
+def _handle_batch_task_done(task: asyncio.Task):
+    """Log unhandled exceptions from background batch tasks."""
+    if task.cancelled():
+        logger.warning("Batch generation task was cancelled")
+        return
+    exc = task.exception()
+    if exc:
+        logger.error("Batch generation failed with unhandled exception: %s", exc, exc_info=exc)
 
 
 # ─── Campaign CRUD ───────────────────────────────────────────────────────────────
@@ -116,8 +127,6 @@ async def start_batch_generation(
     """Start batch video generation for all pending products in a campaign.
     Returns immediately — poll /progress for status.
     """
-    import asyncio
-
     from app.services import batch_generator
 
     campaign = await db.get_campaign(campaign_id)
@@ -136,7 +145,10 @@ async def start_batch_generation(
     await db.update_campaign_status(campaign_id, CampaignStatus.generating)
 
     # Fire-and-forget: run batch in background
-    asyncio.create_task(batch_generator.run_batch(campaign, pending, concurrency=req.concurrency))
+    task = asyncio.create_task(
+        batch_generator.run_batch(campaign, pending, concurrency=req.concurrency)
+    )
+    task.add_done_callback(_handle_batch_task_done)
 
     return {
         "status": "started",

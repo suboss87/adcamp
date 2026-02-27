@@ -101,7 +101,7 @@ async def run_pipeline(
 
     # Step 4: Video generation via Seedance
     primary_platform = platforms[0] if platforms else "tiktok"
-    ratio = video_gen._RATIO_MAP.get(primary_platform, "16:9")
+    ratio = video_gen.RATIO_MAP.get(primary_platform, "16:9")
     logger.info("Step 4: Seedance — Creating video task with %s (ratio=%s)...", model_id, ratio)
     video_start = time.time()
     task_id = await video_gen.create_video_task(

@@ -54,7 +54,7 @@ jobs:
           pip install ruff black
 
       - name: Ruff check
-        run: ruff check app/
+        run: ruff check app/ dashboard/ tests/
 
       - name: Black check
-        run: black app/ --check
+        run: black app/ dashboard/ tests/ --check

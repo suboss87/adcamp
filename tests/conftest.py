@@ -1,7 +1,8 @@
 """Shared fixtures for AdCamp tests."""
+
 import pytest
 
-from app.models.schemas import AdScript, SKUTier
+from app.models.schemas import AdScript
 from app.services import cost_tracker
 
 

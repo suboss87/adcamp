@@ -1,5 +1,4 @@
 """Tests for the CSV product catalog parser."""
-import pytest
 
 from app.services.csv_parser import parse_csv
 
@@ -34,25 +33,20 @@ class TestCSVParser:
 
     def test_tier_normalization_premium_to_hero(self):
         csv_text = (
-            "sku_id,product_name,description,sku_tier\n"
-            "SKU-001,Widget,A great widget,premium\n"
+            "sku_id,product_name,description,sku_tier\n" "SKU-001,Widget,A great widget,premium\n"
         )
         products, _ = parse_csv(csv_text)
         assert products[0].sku_tier == "hero"
 
     def test_tier_normalization_standard_to_catalog(self):
         csv_text = (
-            "sku_id,product_name,description,sku_tier\n"
-            "SKU-001,Widget,A great widget,standard\n"
+            "sku_id,product_name,description,sku_tier\n" "SKU-001,Widget,A great widget,standard\n"
         )
         products, _ = parse_csv(csv_text)
         assert products[0].sku_tier == "catalog"
 
     def test_tier_default_to_catalog(self):
-        csv_text = (
-            "sku_id,product_name,description\n"
-            "SKU-001,Widget,A great widget\n"
-        )
+        csv_text = "sku_id,product_name,description\n" "SKU-001,Widget,A great widget\n"
         products, _ = parse_csv(csv_text)
         assert products[0].sku_tier == "catalog"
 
@@ -68,10 +62,7 @@ class TestCSVParser:
         assert products[0].sku_id == "SKU-002"
 
     def test_whitespace_in_headers_handled(self):
-        csv_text = (
-            " sku_id , product_name , description \n"
-            "SKU-001,Widget,A great widget\n"
-        )
+        csv_text = " sku_id , product_name , description \n" "SKU-001,Widget,A great widget\n"
         products, errors = parse_csv(csv_text)
         assert len(products) == 1
         assert len(errors) == 0

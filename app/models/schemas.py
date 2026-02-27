@@ -24,6 +24,7 @@ class GenerateRequest(BaseModel):
 
     brief: str = Field(
         ...,
+        max_length=2000,
         description="Campaign brief, e.g. 'Summer collection, beach vibes, energetic'",
     )
     product_image_url: str | None = Field(None, description="Public URL of the product image")

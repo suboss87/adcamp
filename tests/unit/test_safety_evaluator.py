@@ -10,15 +10,14 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.models.schemas import AdScript, SKUTier
 from app.models.safety_schemas import SafetyEvalResult
+from app.models.schemas import AdScript, SKUTier
+from app.services.pipeline import ContentBlockedError, run_pipeline
 from app.services.safety_evaluator import (
-    _classify_risk,
     _calculate_eval_cost,
+    _classify_risk,
     evaluate_content_safety,
 )
-from app.services.pipeline import ContentBlockedError, run_pipeline
-
 
 # ── Fixtures ─────────────────────────────────────────────────────────────────
 
@@ -40,7 +39,9 @@ def _make_llm_response(overall_score: float, categories=None, flagged=None):
         "overall_score": overall_score,
         "categories": categories,
         "flagged_issues": flagged or [],
-        "recommendation": "proceed" if overall_score < 0.3 else "review" if overall_score < 0.8 else "block",
+        "recommendation": (
+            "proceed" if overall_score < 0.3 else "review" if overall_score < 0.8 else "block"
+        ),
     }
 
     mock_response = MagicMock()
@@ -107,9 +108,7 @@ class TestEvaluateContentSafety:
 
     @patch("app.services.safety_evaluator._client")
     async def test_safe_content_passes(self, mock_client, safe_script):
-        mock_client.chat.completions.create = AsyncMock(
-            return_value=_make_llm_response(0.05)
-        )
+        mock_client.chat.completions.create = AsyncMock(return_value=_make_llm_response(0.05))
         result, in_tok, out_tok = await evaluate_content_safety(safe_script)
 
         assert result.risk_level == "safe"
@@ -158,9 +157,7 @@ class TestEvaluateContentSafety:
 
     @patch("app.services.safety_evaluator._client")
     async def test_token_and_cost_tracking(self, mock_client, safe_script):
-        mock_client.chat.completions.create = AsyncMock(
-            return_value=_make_llm_response(0.0)
-        )
+        mock_client.chat.completions.create = AsyncMock(return_value=_make_llm_response(0.0))
         result, in_tok, out_tok = await evaluate_content_safety(safe_script)
 
         assert result.eval_tokens_in == 300
@@ -223,7 +220,7 @@ class TestPipelineSafetyIntegration:
     def mock_video_gen(self):
         with patch("app.services.pipeline.video_gen") as mock:
             mock.create_video_task = AsyncMock(return_value="task-safe-123")
-            mock._RATIO_MAP = {"tiktok": "9:16", "instagram": "1:1", "youtube": "16:9"}
+            mock.RATIO_MAP = {"tiktok": "9:16", "instagram": "1:1", "youtube": "16:9"}
             yield mock
 
     @pytest.fixture
@@ -268,40 +265,64 @@ class TestPipelineSafetyIntegration:
             yield mock
 
     async def test_safe_content_proceeds(
-        self, mock_script_writer, mock_video_gen, mock_monitoring, mock_safety_safe,
+        self,
+        mock_script_writer,
+        mock_video_gen,
+        mock_monitoring,
+        mock_safety_safe,
     ):
         result = await run_pipeline(
-            brief="safe brief", sku_tier=SKUTier.catalog, sku_id="SKU-001",
+            brief="safe brief",
+            sku_tier=SKUTier.catalog,
+            sku_id="SKU-001",
         )
         assert "safety" in result
         assert result["safety"].risk_level == "safe"
         mock_video_gen.create_video_task.assert_called_once()
 
     async def test_blocked_content_raises_error(
-        self, mock_script_writer, mock_video_gen, mock_monitoring, mock_safety_blocked,
+        self,
+        mock_script_writer,
+        mock_video_gen,
+        mock_monitoring,
+        mock_safety_blocked,
     ):
         with pytest.raises(ContentBlockedError) as exc_info:
             await run_pipeline(
-                brief="dangerous brief", sku_tier=SKUTier.catalog, sku_id="SKU-002",
+                brief="dangerous brief",
+                sku_tier=SKUTier.catalog,
+                sku_id="SKU-002",
             )
         assert exc_info.value.safety_result.risk_level == "blocked"
         mock_video_gen.create_video_task.assert_not_called()
 
     async def test_disabled_safety_skips_eval(
-        self, mock_script_writer, mock_video_gen, mock_monitoring, mock_safety_safe,
+        self,
+        mock_script_writer,
+        mock_video_gen,
+        mock_monitoring,
+        mock_safety_safe,
     ):
         with patch("app.services.pipeline.settings") as mock_settings:
             mock_settings.safety_enabled = False
             result = await run_pipeline(
-                brief="any brief", sku_tier=SKUTier.catalog, sku_id="SKU-003",
+                brief="any brief",
+                sku_tier=SKUTier.catalog,
+                sku_id="SKU-003",
             )
         assert result["safety"] is None
         mock_safety_safe.evaluate_content_safety.assert_not_called()
 
     async def test_safety_cost_included(
-        self, mock_script_writer, mock_video_gen, mock_monitoring, mock_safety_safe,
+        self,
+        mock_script_writer,
+        mock_video_gen,
+        mock_monitoring,
+        mock_safety_safe,
     ):
         result = await run_pipeline(
-            brief="safe brief", sku_tier=SKUTier.catalog, sku_id="SKU-004",
+            brief="safe brief",
+            sku_tier=SKUTier.catalog,
+            sku_id="SKU-004",
         )
         assert result["cost"].safety_eval_cost_usd > 0

@@ -9,8 +9,10 @@ from typing import Any
 
 _start_time = time.time()
 
-# In-memory metrics store (use Redis/Prometheus in production)
-# Cost and per-tier video counts are tracked by cost_tracker (single source of truth)
+# In-memory metrics store — safe under single-process asyncio (cooperative multitasking).
+# WARNING: Not safe with multi-process workers (e.g., gunicorn -w 4). Use Redis or
+# prometheus_client for multi-worker deployments.
+# Cost and per-tier video counts are tracked by cost_tracker (single source of truth).
 _metrics = {
     "videos_generated_total": 0,
     "videos_failed_total": 0,

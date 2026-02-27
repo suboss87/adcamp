@@ -1,9 +1,9 @@
 """Tests for security hardening: CORS config, API key auth, upload limits, rate limiting."""
+
 import sys
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 
 # ── Config-only tests (no app import needed) ────────────────────────────────
 
@@ -109,8 +109,9 @@ def _patch_google():
 def client_no_auth(_patch_google):
     """App client with API_KEY disabled (default)."""
     with patch("app.config.settings.api_key", ""):
-        from app.main import app
         from fastapi.testclient import TestClient
+
+        from app.main import app
 
         yield TestClient(app, raise_server_exceptions=False)
 
@@ -119,8 +120,9 @@ def client_no_auth(_patch_google):
 def client_with_auth(_patch_google):
     """App client with API_KEY enabled."""
     with patch("app.config.settings.api_key", "test-secret-key"):
-        from app.main import app
         from fastapi.testclient import TestClient
+
+        from app.main import app
 
         yield TestClient(app, raise_server_exceptions=False)
 
