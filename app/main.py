@@ -181,6 +181,7 @@ async def _run_pipeline(req: GenerateRequest) -> dict:
         platforms=[p.value for p in req.platforms] if req.platforms else ["tiktok"],
         duration=req.duration,
         resolution=req.resolution,
+        sound=req.sound,
     )
 
 

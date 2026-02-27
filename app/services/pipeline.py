@@ -49,6 +49,7 @@ async def run_pipeline(
     platforms: list[str] | None = None,
     duration: int = 8,
     resolution: str = "720p",
+    sound: bool = True,
 ) -> dict:
     """Execute the pipeline (script -> safety eval -> route -> video -> cost).
 
@@ -111,6 +112,7 @@ async def run_pipeline(
         duration=duration,
         resolution=resolution,
         ratio=ratio,
+        sound=sound,
     )
     monitoring.record_duration("video_generation_duration_seconds", time.time() - video_start)
 

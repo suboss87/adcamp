@@ -36,6 +36,7 @@ class GenerateRequest(BaseModel):
     )
     duration: int = Field(8, ge=2, le=12)
     resolution: str = "720p"
+    sound: bool = Field(default=True, description="Enable native audio in generated video")
 
     model_config = ConfigDict(
         json_schema_extra={

@@ -116,6 +116,7 @@ async def _process_product(campaign: Campaign, product: Product):
             platforms=campaign.platforms,
             duration=campaign.duration,
             resolution=campaign.resolution,
+            sound=settings.video_sound,
         )
 
         # Add brief generation cost to the pipeline cost breakdown

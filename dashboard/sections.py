@@ -18,6 +18,8 @@ from config import (
     step_indicator,
 )
 
+_MODEL_DISPLAY = {"catalog": "Seedance 1.0 Pro Fast", "hero": "Seedance 1.5 Pro"}
+
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # DATA FETCHERS
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -378,10 +380,10 @@ def render_quick_video():
         cfg1, cfg2, cfg3, cfg4 = st.columns(4)
         with cfg1:
             sku_tier = st.selectbox(
-                "SKU Tier",
+                "Model",
                 ["catalog", "hero"],
                 index=0,
-                format_func=lambda x: "Hero" if x == "hero" else "Catalog",
+                format_func=lambda x: _MODEL_DISPLAY[x],
             )
         with cfg2:
             duration = st.selectbox(
@@ -395,7 +397,7 @@ def render_quick_video():
         with cfg4:
             sku_id = st.text_input("SKU ID", value="SKU-001")
 
-        cfg5, cfg6 = st.columns(2)
+        cfg5, cfg6, cfg7 = st.columns(3)
         with cfg5:
             platforms = st.multiselect(
                 "Platforms",
@@ -403,16 +405,12 @@ def render_quick_video():
                 default=["tiktok"],
                 format_func=str.capitalize,
             )
-            if platforms:
-                st.markdown(
-                    f'<div style="display:flex;gap:0.35rem;flex-wrap:wrap;margin-top:-0.3rem;">'
-                    f"{platform_pills_html(platforms)}</div>",
-                    unsafe_allow_html=True,
-                )
         with cfg6:
+            sound = st.toggle("Audio", value=True)
+        with cfg7:
             est_label = cost_label(sku_tier, duration, resolution)
             st.markdown(
-                f'<div style="display:flex;justify-content:flex-end;padding-top:1.6rem;">'
+                f'<div style="display:flex;justify-content:flex-end;align-items:center;padding-top:1.4rem;">'
                 f'<div class="ac-pill">Est. {est_label}</div></div>',
                 unsafe_allow_html=True,
             )
@@ -434,7 +432,7 @@ def render_quick_video():
                 st.caption(f"{width} x {height}px")
 
     _AB_DIMENSIONS = {
-        "Model Tier": "sku_tier",
+        "Model": "sku_tier",
         "Duration": "duration",
         "Resolution": "resolution",
         "Platform": "platforms",
@@ -446,7 +444,7 @@ def render_quick_video():
         "platforms": ["tiktok", "instagram", "youtube"],
     }
     _AB_FORMAT = {
-        "sku_tier": lambda x: "Hero" if x == "hero" else "Catalog",
+        "sku_tier": lambda x: _MODEL_DISPLAY[x],
         "duration": lambda x: f"{x}s",
         "resolution": str,
         "platforms": str.capitalize,
@@ -551,6 +549,7 @@ def render_quick_video():
             "platforms": platforms,
             "duration": duration,
             "resolution": resolution,
+            "sound": sound,
         }
 
         if not ab_enabled:
@@ -640,12 +639,6 @@ def render_campaign_batch():
                 format_func=str.capitalize,
                 key="cb_platforms",
             )
-            if platforms:
-                st.markdown(
-                    f'<div style="display:flex;gap:0.35rem;flex-wrap:wrap;margin-top:-0.3rem;">'
-                    f"{platform_pills_html(platforms)}</div>",
-                    unsafe_allow_html=True,
-                )
         with c2:
             duration = st.selectbox(
                 "Duration",
